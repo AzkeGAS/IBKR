@@ -168,4 +168,16 @@ def orderStatus(self, orderId, status, filled, remaining,
 
     bracket_manager.on_order_status(orderId, status, parentId)
 
+def openOrder(self, orderId, contract, order, orderState):
+    self._open_orders.append((order, contract))
+
+def openOrderEnd(self):
+    self.bracket_manager.recover_from_open_orders(self._open_orders)
+    self._open_orders.clear()
+
+def nextValidId(self, orderId):
+    self.nextValidOrderId = orderId
+    self._open_orders = []
+    self.reqOpenOrders()
+``
 
