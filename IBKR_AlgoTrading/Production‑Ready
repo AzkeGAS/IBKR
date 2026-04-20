@@ -1,0 +1,70 @@
+from ibapi.client import EClient
+from ibapi.wrapper import EWrapper
+import threading
+import queue
+
+class IBApp(EWrapper, EClient):
+    def __init__(self):
+        EClient.__init__(self, self)
+
+        # Thread-safe queues
+        self.market_data_q = queue.Queue()
+        self.order_status_q = queue.Queue()
+        self.error_q = queue.Queue()
+
+        self.nextOrderId = None
+
+    # ---------- CONNECTION ----------
+    def nextValidId(self, orderId):
+        self.nextOrderId = orderId
+        print("✅ Ready to trade")
+
+    # ---------- ERRORS ----------
+    def error(self, reqId, errorCode, errorString, *_):
+        self.error_q.put((reqId, errorCode, errorString))
+
+    # ---------- MARKET DATA ----------
+    def tickPrice(self, reqId, tickType, price, attrib):
+        self.market_data_q.put({
+            "reqId": reqId,
+            "tickType": tickType,
+            "price": price
+        })
+
+    # ---------- ORDERS ----------
+    def orderStatus(self, orderId, status, filled, remaining,
+                    avgFillPrice, permId, parentId,
+                    lastFillPrice, clientId, whyHeld, mktCapPrice):
+        self.order_status_q.put({
+            "orderId": orderId,
+            "status": status,
+            "filled": filled,
+            "remaining": remaining,
+            "avgFillPrice": avgFillPrice
+        })
+
+
+def run_loop(app):
+    app.run()
+
+
+def process_market_data(app):
+    while True:
+        data = app.market_data_q.get()
+        print(f"📈 Market data: {data}")
+
+
+def process_orders(app):
+    while True:
+        status = app.order_status_q.get()
+        print(f"📦 Order update: {status}")
+
+
+if __name__ == "__main__":
+    app = IBApp()
+    app.connect("127.0.0.1", 7497, clientId=3)
+
+    threading.Thread(target=run_loop, daemon=True).start()
+    threading.Thread(target=process_market_data, args=(app,), daemon=True).start()
+    threading.Thread(target=process_orders, args=(app,), daemon=True).start()
+``
