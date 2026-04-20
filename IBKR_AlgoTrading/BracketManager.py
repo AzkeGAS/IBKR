@@ -121,6 +121,46 @@ class BracketManager:
         print(f"{side} bracket cleared")
         self.brackets[side] = None
 
+    def recover_from_open_orders(self, open_orders):
+    """
+    Rebuild internal bracket state after reconnect.
+    open_orders: list of (order, contract)
+    """
+
+    self.brackets = {"BUY": None, "SELL": None}
+
+    parents = {}
+    children = {}
+
+    # 1️⃣ Separate parents & children
+    for order, contract in open_orders:
+        if order.parentId == 0:
+            parents[order.orderId] = order
+        else:
+            children.setdefault(order.parentId, []).append(order)
+
+    # 2️⃣ Rebuild brackets
+    for parent_id, parent in parents.items():
+        kids = children.get(parent_id, [])
+        if len(kids) != 2:
+            continue  # incomplete bracket → skip
+
+        tp = next(o for o in kids if o.orderType == "LMT")
+        sl = next(o for o in kids if o.orderType == "STP")
+
+        side = parent.action
+
+        self.brackets[side] = {
+            "parent": parent_id,
+            "tp_id": tp.orderId,
+            "sl_id": sl.orderId,
+            "last_tp_price": tp.lmtPrice,
+            "current_sl_price": sl.auxPrice,
+            "parent_filled": parent.orderState.status == "Filled"
+        }
+
+        print(f"{side} bracket recovered (parent {parent_id})")
+
 # In your EWrapper.orderStatus
 def orderStatus(self, orderId, status, filled, remaining,
                 avgFillPrice, permId, parentId,
