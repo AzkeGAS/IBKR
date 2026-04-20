@@ -25,7 +25,7 @@ def register_parent(self, orderId, action):
 
 # Prevent More Than One Bracket Per Side
 def can_place_bracket(self, action):
-    return self.active_brackets[action] is Non
+    return self.active_brackets[action] is None
 
 #Usage
 if app.can_place_bracket("BUY"):
