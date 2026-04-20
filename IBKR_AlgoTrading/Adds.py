@@ -20,8 +20,6 @@ def orderStatus(
     # Parent filled → still active until children finish
       
 #When placing a bracket, record the parent orderId AND side:
-
-
 def register_parent(self, orderId, action):
     self.active_brackets[action] = orderI
 
@@ -48,5 +46,32 @@ if signal == "LONG" and app.can_place_bracket("BUY"):
 
 if signal == "SHORT" and app.can_place_bracket("SELL"):
     place_sell_bracket()
+
+
+#Update Stop Loss Price
+def update_stop_loss(app, contract, stop_order_id, quantity, new_stop_price, action):
+    stop = Order()
+    stop.orderId = stop_order_id
+    stop.action = action            # "SELL" for long, "BUY" for short
+    stop.orderType = "STP"
+    stop.totalQuantity = quantity
+    stop.auxPrice = new_stop_price  # NEW STOP PRICE
+    stop.transmit = True
+
+    app.placeOrder(stop.orderId, contract, stop)
+
+# Before updating:
+def can_update(status):
+    return status in ("PreSubmitted", "Submitted"
+
+# Store Order IDs when creating the bracket:
+self.brackets = {
+    "BUY": {
+        "parent": parent_id,
+        "tp": parent_id + 1,
+        "sl": parent_id + 2
+    }
+}
+
 
 
