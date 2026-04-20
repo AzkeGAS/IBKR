@@ -121,3 +121,11 @@ class BracketManager:
         print(f"{side} bracket cleared")
         self.brackets[side] = None
 
+# In your EWrapper.orderStatus
+def orderStatus(self, orderId, status, filled, remaining,
+                avgFillPrice, permId, parentId,
+                lastFillPrice, clientId, whyHeld, mktCapPrice):
+
+    bracket_manager.on_order_status(orderId, status, parentId)
+
+
