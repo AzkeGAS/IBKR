@@ -31,7 +31,7 @@ def can_place_bracket(self, action):
 if app.can_place_bracket("BUY"):
     app.place_buy_bracket()
 else:
-    print("BUY bracket already active"
+    print("BUY bracket already active")
 
           
 def clear_if_parent(self, orderId):
