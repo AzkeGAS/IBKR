@@ -171,7 +171,7 @@ with open("strategy_config.json") as f:
     config = json.load(f)
 
 signal_engine = SignalEngine()
-app = IBApp(config)
+app = IBApp(config, signal_engine)
 app.connect("127.0.0.1", 7497, clientId=1)
 
 threading.Thread(target=app.run, daemon=True).start()
