@@ -33,6 +33,7 @@ class IBApp(EWrapper, EClient):
 
         # ---- config ----
         self.config = config
+        self.signal_engine = signal_engine
 
         # ---- state ----
         self.nextOrderId = None
