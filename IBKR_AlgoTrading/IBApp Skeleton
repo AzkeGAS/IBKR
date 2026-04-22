@@ -1,0 +1,181 @@
+import json
+import threading
+import time
+from ibapi.client import EClient
+from ibapi.wrapper import EWrapper
+from ibapi.contract import Contract
+from ibapi.order import Order
+
+class SignalEngine:
+    def __init__(self):
+        self.last_close = None
+
+    def on_bar_close(self, close_price):
+        """
+        Return: "LONG", "SHORT", or None
+        """
+        if self.last_close is None:
+            self.last_close = close_price
+            return None
+
+        signal = None
+        if close_price > self.last_close:
+            signal = "LONG"
+        elif close_price < self.last_close:
+            signal = "SHORT"
+
+        self.last_close = close_price
+        return signal
+
+class IBApp(EWrapper, EClient):
+    def __init__(self, config):
+        EClient.__init__(self, self)
+
+        # ---- config ----
+        self.config = config
+
+        # ---- state ----
+        self.nextOrderId = None
+        self.position_side = None     # LONG / SHORT / None
+        self.parent_order_id = None
+        self.stop_order_id = None
+        self.stop_price = None
+
+  def nextValidId(self, orderId):
+      self.nextOrderId = orderId
+      print("Connected. NextOrderId:", orderId)
+
+  def build_contract(self):
+      c = Contract()
+      cfg = self.config["contract"]
+      c.symbol = cfg["symbol"]
+      c.secType = cfg["secType"]
+      c.exchange = cfg["exchange"]
+      c.currency = cfg["currency"]
+      c.lastTradeDateOrContractMonth = cfg["expiry"]
+      return c
+  
+  def request_history(self):
+      self.reqHistoricalData(
+          reqId=1,
+          contract=self.build_contract(),
+          endDateTime="",
+          durationStr="5 D",
+          barSizeSetting="3 mins",
+          whatToShow="TRADES",
+          useRTH=False,
+          formatDate=1,
+          keepUpToDate=False,
+          chartOptions=[]
+      )
+
+  def historicalData(self, reqId, bar):
+      self.on_bar_close(bar.close)
+  
+  def historicalDataEnd(self, reqId, start, end):
+      print("Historical data received")
+  
+  def can_trade(self, side):
+      return self.position_side is None or self.position_side != side
+  
+  def create_parent(self, side, price):
+      o = Order()
+      o.orderId = self.nextOrderId
+      o.action = "BUY" if side == "LONG" else "SELL"
+      o.orderType = "LMT"
+      o.lmtPrice = price
+      o.totalQuantity = self.config["order"]["quantity"]
+      o.transmit = False
+      return o
+  
+  def create_stop(self, side, stop_price, parent_id):
+      o = Order()
+      o.orderId = self.nextOrderId + 1
+      o.action = "SELL" if side == "LONG" else "BUY"
+      o.orderType = "STP"
+      o.auxPrice = stop_price
+      o.totalQuantity = self.config["order"]["quantity"]
+      o.parentId = parent_id
+      o.transmit = True
+      return o
+  
+  def place_trade(self, side, entry_price, stop_price):
+      if not self.can_trade(side):
+          return
+  
+      parent = self.create_parent(side, entry_price)
+      stop = self.create_stop(side, stop_price, parent.orderId)
+  
+      contract = self.build_contract()
+      self.placeOrder(parent.orderId, contract, parent)
+      self.placeOrder(stop.orderId, contract, stop)
+  
+      self.parent_order_id = parent.orderId
+      self.stop_order_id = stop.orderId
+      self.position_side = side
+      self.stop_price = stop_price
+  
+      self.nextOrderId += 2
+  
+  def on_bar_close(self, close_price):
+      
+      # 1️⃣ Get signal from strategy
+      side_signal = self.signal_engine.on_bar_close(close_price)
+
+
+      # 2️⃣ Only place order if bar closed AND signal exists
+      if side_signal and self.can_trade(side_signal):
+          self.place_entry_with_stop(
+              side=side_signal,
+              entry_price=close_price
+
+      if self.position_side is None:
+          return
+      # 3️⃣ Update stop if in position
+      offset = self.config["order"]["stop_offset"]
+  
+      if self.position_side == "LONG":
+          new_stop = close_price - offset
+      else:
+          new_stop = close_price + offset
+  
+      if new_stop != self.stop_price:
+          self.modify_stop(new_stop)
+  
+  def modify_stop(self, new_stop):
+      o = Order()
+      o.orderId = self.stop_order_id
+      o.orderType = "STP"
+      o.auxPrice = new_stop
+      o.totalQuantity = self.config["order"]["quantity"]
+      o.transmit = True
+  
+      self.placeOrder(o.orderId, self.build_contract(), o)
+      self.stop_price = new_stop
+  
+      print("Stop updated:", new_stop)
+  
+  def orderStatus(self, orderId, status, filled, remaining, *_):
+      if orderId == self.stop_order_id and status == "Filled":
+          self.reset_position()
+  
+  def reset_position(self):
+      self.position_side = None
+      self.parent_order_id = None
+      self.stop_order_id = None
+      self.stop_price = None
+
+
+with open("strategy_config.json") as f:
+    config = json.load(f)
+
+signal_engine = SignalEngine()
+app = IBApp(config)
+app.connect("127.0.0.1", 7497, clientId=1)
+
+threading.Thread(target=app.run, daemon=True).start()
+time.sleep(2)
+
+app.request_history()
+``
+
