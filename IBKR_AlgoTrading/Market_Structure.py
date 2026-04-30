@@ -31,9 +31,12 @@ def pivots_with_direction(df, left=1, right=1):
     swing_high = np.zeros(n, dtype=bool)
     swing_low = np.zeros(n, dtype=bool)
     
-    pivots = []  # (index, price, type, wpr)
-    
     df['swing'] = 0
+    df['dir'] = 0
+    df["H"] = 0
+    df["L"] = 0
+
+    zz = []
     
     for i in range(left, len(df) - right):
 
@@ -44,36 +47,31 @@ def pivots_with_direction(df, left=1, right=1):
         is_pivot_low  = lows[i]  == window_low.min()
 
         if is_pivot_high:
-            swing_high[i] = True
             df.at[i,'swing'] = 1
+            price = highs
         elif is_pivot_low:
-            swing_low[i] = True
             df.at[i,'swing'] = -1
+            price = lows
         else:
             df.at[i,'swing'] = 0
-        last_H = df[df['swing']=1,'high']
-        last_H_idx = df[df['swing']=1,'idx']
-        last_L = df[df['swing']=-1,'low']
-        last_L_idx = df[df['swing']=-1,'idx']
+            
+        last_high_idx = df.loc[df["swing"] == 1].index[-1]
+        last_high = df.at[last_high_idx, "high"]
+        
+        last_low_idx = df.loc[df["swing"] == -1].index[-1]
+        last_low = df.at[last_low_idx, "high"]
 
-
-    for i in range(len(zz) - 1):
-        start_idx = int(zz.iloc[i]['idx'])
-        end_idx = int(zz.iloc[i+1]['idx'])
-
-        start_price = zz.iloc[i]['price']
-        end_price = zz.iloc[i+1]['price']
-
-        # Linear interpolation between pivots
-        steps = end_idx - start_idx
-        for j in range(steps + 1):
-            t = j / steps if steps != 0 else 0
-            zigzag_series[start_idx + j] = start_price + t * (end_price - start_price)
-
-    df['ZigZag'] = zigzag_series
-    df["H"] = swing_high
-    df["L"] = swing_low
-    
+        
+        
+        if last_high_idx - last_low_idx >= 0
+            df['dir'] = 1
+        else
+            df['dir'] = -1
+        zz.append((i,price,swing,dir))
+        if len(zz)>3
+            p0 = zz[0][1]
+            p1 = zz[1][1]
+            p2 = zz[2][1]
     return df
 
 def mtf_pivots_with_direction(df, left=40, right=40):
