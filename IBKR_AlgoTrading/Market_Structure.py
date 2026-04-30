@@ -43,7 +43,7 @@ def pivots_with_direction(df, left=1, right=1):
         is_pivot_low  = lows[i]  == window_low.min()
 
         if is_pivot_high:
-            df.at[i,'swing'] = 1
+           
             df.at[i, 'H'] = highs[i]
             H_idx = i
             
@@ -54,20 +54,17 @@ def pivots_with_direction(df, left=1, right=1):
                     
         if H_idx < L_idx:
             df.at[i,'dir'] = 1
-            p0 = df.at[i, 'high']
+            p0 = df.at[i, 'close']
             p1 = df.at[L_idx,'L']
             p2 = df.at[H_idx, 'H']
+            df.at[i,'swing'] = p2-p1
         else
             df.at[i,'dir'] = -1
-            p0 = df.at[i, 'low']
+            p0 = df.at[i, 'close']
             p1 = df.at[H_idx, 'H']
             P2 = df.at[L_idx,'L']
-        
-        if len(zz)>3 and zz[0][2]==-1
-            p0 = close
-            p1 = zz[-1][1]
-            p2 = zz[-2][1]
-    
+            df.at[i,'swing'] = p1-p2
+            
     return df, zz
 
 def mtf_pivots_with_direction(df, left=40, right=40):
