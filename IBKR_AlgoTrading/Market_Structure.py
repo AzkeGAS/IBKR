@@ -25,6 +25,7 @@ def main_indicator(df):
 def pivots_with_direction(df, left=1, right=1):
     highs = df['high'].values
     lows = df['low'].values
+    close = df['close'].iloc[-1]
     wprs = wpr(df,40).values
     n=len(df)
 
@@ -60,16 +61,14 @@ def pivots_with_direction(df, left=1, right=1):
         
         last_low_idx = df.loc[df["swing"] == -1].index[-1]
         last_low = df.at[last_low_idx, "high"]
-
-        
         
         if last_high_idx - last_low_idx >= 0
             df['dir'] = 1
         else
             df['dir'] = -1
         zz.append((i,price,swing,dir))
-        if len(zz)>3
-            p0 = zz[0][1]
+        if len(zz)>3 and zz[0][2]==-1
+            p0 = close
             p1 = zz[1][1]
             p2 = zz[2][1]
     return df
