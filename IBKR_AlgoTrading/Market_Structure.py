@@ -27,12 +27,11 @@ def ZZ_df(df, left=1, right=1):
     lows = df['low'].values
     close = df['close'].iloc[-1]
 
-    df['swing'] = np=nan  # 1 = swing high, -1 = swing low
-    df['dir'] = np-nan     1 = up, -1 = down
-    df["H"] = np.nan
-    df["L"] =np.nan
-
-    zz = []
+    df['swing'] = np.nan  # last swing length
+    df['dir'] = np.nan    # 1 = up, -1 = down
+    df["H"] = np.nan        # pivot high
+    df["L"] =np.nan        # pivot low
+    df["BOS"] =np.nan        # pivot low
     
     for i in range(left, len(df) - right):
 
@@ -43,29 +42,43 @@ def ZZ_df(df, left=1, right=1):
         is_pivot_low  = lows[i]  == window_low.min()
 
         if is_pivot_high:
-           
             df.at[i, 'H'] = highs[i]
             H_idx = i
             
         elif is_pivot_low:
-            df.at[i,'swing'] = -1
             df.at[i, 'L'] = lows[i]
             L_idx = i
                     
         if H_idx < L_idx:
             df.at[i,'dir'] = 1
             p0 = df.at[i, 'close']
-            p1 = df.at[L_idx,'L']
-            p2 = df.at[H_idx, 'H']
+            p1 = df["L"].dropna().iloc[-1]
+            p2 = df["H"].dropna().iloc[-1]
             df.at[i,'swing'] = p2-p1
+            wpr0 = df.at[i, 'wpr']
+            wpr1 = df.at[L_idx, 'wpr']
+            wpr2 = df.at[H_idx, 'wpr']
+            
+            if p0>=(p2+buffer) & wpr0>=-50 & wpr2>=-50
+                df.at[i,'BOS']= "UP"
+            elif p0>=(p2+buffer) & wpr0>=-50 & wpr1>=-50
+                df.at[i,'BOS_UP']=="UP"
+            
         else
             df.at[i,'dir'] = -1
             p0 = df.at[i, 'close']
-            p1 = df.at[H_idx, 'H']
-            P2 = df.at[L_idx,'L']
+            p1 = df["H"].dropna().iloc[-1]
+            P2 = df["L"].dropna().iloc[-1]
             df.at[i,'swing'] = p1-p2
-            
-    return df, zz
+            wpr0 = df.at[i, 'wpr']
+            wpr1 = df.at[H_idx, 'wpr']
+            wpr2 = df.at[L_idx, 'wpr']
+
+            if p0<=(p2-buffer) & wpr0<=-50 & wpr2<=-50
+                df.at[i,'BOS_DOWN']="DOWN"
+            elif p0<=(p2-buffer) & wpr0<=-50 & wpr1<=-50
+                df.at[i,'BOS_DOWN']="DOWN"
+    return df
 
 def mtf_pivots_with_direction(df, left=40, right=40):
     highs = df['high'].values
