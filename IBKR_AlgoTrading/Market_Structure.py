@@ -86,6 +86,7 @@ def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
     df["H_tf"] = np.nan        # pivot high
     df["L_tf"] =np.nan        # pivot low
     df['swing_tf'] = np.nan  # last swing length
+    
     df["Risk_Long"]  =  np.nan  # Risk long
     df["ST_Long"]    =  np.nan  # Stop Loss Long
     df["Risk_Short"] =  np.nan  # Risk short
