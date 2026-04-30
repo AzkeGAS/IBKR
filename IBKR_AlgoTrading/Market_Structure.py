@@ -22,7 +22,7 @@ def main_indicator(df):
 
     return df
 
-def pivots_with_direction(df, left=2, right=2):
+def pivots_with_direction(df, left=1, right=1):
     highs = df['high'].values
     lows = df['low'].values
     wprs = wpr(df,40).values
@@ -33,7 +33,8 @@ def pivots_with_direction(df, left=2, right=2):
     
     pivots = []  # (index, price, type, wpr)
     
-
+    df['swing'] = 0
+    
     for i in range(left, len(df) - right):
 
         window_high = highs[i-left:i+right+1]
@@ -43,22 +44,19 @@ def pivots_with_direction(df, left=2, right=2):
         is_pivot_low  = lows[i]  == window_low.min()
 
         if is_pivot_high:
-            pivots.append({"idx":i, "price":highs[i], "type":'H', "wpr":wprs[i]})
             swing_high[i] = True
- 
+            df.at[i,'swing'] = 1
         elif is_pivot_low:
-            pivots.append({"idx":i, "price":lows[i], "type":'L', "wpr":wprs[i]})
             swing_low[i] = True
+            df.at[i,'swing'] = -1
+        else:
+            df.at[i,'swing'] = 0
+        last_H = df[df['swing']=1,'high']
+        last_H_idx = df[df['swing']=1,'idx']
+        last_L = df[df['swing']=-1,'low']
+        last_L_idx = df[df['swing']=-1,'idx']
 
-    zz = pd.DataFrame(pivots, columns=["idx", "price", "type", "wpr"])
 
-    # Sort pivots just in case
-    zz = zz.sort_values("idx")
-    zz = zz[zz['type'] != zz['type'].shift()]
-
-    zigzag_series = [None] * len(df)
-
-    # Connect pivots
     for i in range(len(zz) - 1):
         start_idx = int(zz.iloc[i]['idx'])
         end_idx = int(zz.iloc[i+1]['idx'])
