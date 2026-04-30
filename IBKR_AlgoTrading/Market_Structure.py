@@ -69,8 +69,8 @@ def pivots_with_direction(df, left=1, right=1):
         zz.append((i,price,swing,dir))
         if len(zz)>3 and zz[0][2]==-1
             p0 = close
-            p1 = zz[1][1]
-            p2 = zz[2][1]
+            p1 = zz[-1][1]
+            p2 = zz[-2][1]
     return df
 
 def mtf_pivots_with_direction(df, left=40, right=40):
