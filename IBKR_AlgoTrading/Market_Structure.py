@@ -26,12 +26,9 @@ def pivots_with_direction(df, left=1, right=1):
     highs = df['high'].values
     lows = df['low'].values
     close = df['close'].iloc[-1]
-    wprs = wpr(df,40).values
+
     n=len(df)
 
-    swing_high = np.zeros(n, dtype=bool)
-    swing_low = np.zeros(n, dtype=bool)
-    
     df['swing'] = 0
     df['dir'] = 0
     df["H"] = 0
@@ -49,29 +46,26 @@ def pivots_with_direction(df, left=1, right=1):
 
         if is_pivot_high:
             df.at[i,'swing'] = 1
-            price = highs
+            price = highs[i]
         elif is_pivot_low:
             df.at[i,'swing'] = -1
-            price = lows
+            price = lows[i]
         else:
             df.at[i,'swing'] = 0
             
-        last_high_idx = df.loc[df["swing"] == 1].index[-1]
-        last_high = df.at[last_high_idx, "high"]
+        zz.append((i,price,swing))
         
-        last_low_idx = df.loc[df["swing"] == -1].index[-1]
-        last_low = df.at[last_low_idx, "high"]
-        
-        if last_high_idx - last_low_idx >= 0
-            df['dir'] = 1
+        if zz[-1][0] - zz[-2][0] >= 0:
+            df.at[i,'dir'] = 1
         else
-            df['dir'] = -1
-        zz.append((i,price,swing,dir))
+            df.at[i,'dir'] = -1
+        
         if len(zz)>3 and zz[0][2]==-1
             p0 = close
             p1 = zz[-1][1]
             p2 = zz[-2][1]
-    return df
+    
+    return df, zz
 
 def mtf_pivots_with_direction(df, left=40, right=40):
     highs = df['high'].values
