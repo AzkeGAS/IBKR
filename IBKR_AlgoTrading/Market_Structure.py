@@ -82,17 +82,14 @@ def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
     lows = df['low'].values
     close = df['close'].iloc[-1]
 
-    df['swing_tf'] = np.nan  # last swing length
     df['dir_tf'] = np.nan    # 1 = up, -1 = down
     df["H_tf"] = np.nan        # pivot high
     df["L_tf"] =np.nan        # pivot low
-
+    df['swing_tf'] = np.nan  # last swing length
     df["Risk_Long"]  =  np.nan  # Risk long
     df["ST_Long"]    =  np.nan  # Stop Loss Long
     df["Risk_Short"] =  np.nan  # Risk short
     df["ST_Short"]   =  np.nan  # Stop Loss Short
-    df["lowest"]   =  np.nan  # last swing length
-    df["highest"]   =  np.nan  # last swing length
     
     for i in range(left, len(df) - right):
 
@@ -115,7 +112,7 @@ def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
             p0 = df.loc[H_idx:, 'low'].min()
             p1 = df["H_tf"].dropna().iloc[-1]
             p2 = df["L_tf"].dropna().iloc[-1]
-            df.at[i,'swing_tf'] = p1-p2
+            df.at[i,'swing_tf'] = p2-p1
             wpr_tf = df.at[i, 'wpr']
             
             df.at[i,'ST_Short'] = p1 + abs(p1 - p2) * (RM / 100)
@@ -130,7 +127,7 @@ def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
             p0 = df.loc[L_idx:, 'high'].max()
             p1 = df["H_tf"].dropna().iloc[-1]
             p2 = df["L_tf"].dropna().iloc[-1]
-            df.at[i,'swing'] = p1-p2
+            df.at[i,'swing_tf'] = p1-p2
             wpr_tf = df.at[i, 'wpr']
 
             df.at[i,'ST_Long'] = p1 + abs(p1 - p2) * (RM / 100)
