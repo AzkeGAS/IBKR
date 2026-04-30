@@ -118,12 +118,12 @@ def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
             df.at[i,'swing_tf'] = p1-p2
             wpr_tf = df.at[i, 'wpr']
             
-            ST_Short = p1 + abs(p1 - p2) * (RM / 100)
-            ST_Long  = p0 - abs(p1 - p0) * (RM / 100)
+            df.at[i,'ST_Short'] = p1 + abs(p1 - p2) * (RM / 100)
+            df.at[i,'ST_Long']  = p0 - abs(p1 - p0) * (RM / 100)
 
             # calcular riesgo
-            Risk_Short = (ST_Short - close) / ST_Short * 100
-            Risk_Long  = (close - ST_Long) / ST_Long * 100
+            df.at[i,'Risk_Short'] = (ST_Short - close) / ST_Short * 100
+            df.at[i,'Risk_Long']  = (close - ST_Long) / ST_Long * 100
             
         else
             df.at[i,'dir'] = 1
@@ -133,12 +133,12 @@ def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
             df.at[i,'swing'] = p1-p2
             wpr_tf = df.at[i, 'wpr']
 
-            ST_Long = p1 + abs(p1 - p2) * (RM / 100)
-            ST_Short  = p0 - abs(p1 - p0) * (RM / 100)
+            df.at[i,'ST_Long'] = p1 + abs(p1 - p2) * (RM / 100)
+            df.at[i,'ST_Short']  = p0 - abs(p1 - p0) * (RM / 100)
 
             # calcular riesgo
-            Risk_Short = (ST_Short - close) / ST_Short * 100
-            Risk_Long  = (close - ST_Long) / ST_Long * 100
+            df.at[i,'Risk_Short'] = (ST_Short - close) / ST_Short * 100
+            df.at[i,'Risk_Long']  = (close - ST_Long) / ST_Long * 100
 
     return df
 
