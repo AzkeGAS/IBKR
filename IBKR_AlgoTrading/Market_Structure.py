@@ -62,36 +62,41 @@ def HFMS(df, left=1, right=1):
             if p0>=(p2+buffer) & wpr0>=-50 & wpr2>=-50
                 df.at[i,'BOS']= "UP"
             elif p0>=(p2+buffer) & wpr0>=-50 & wpr1>=-50
-                df.at[i,'BOS_UP']=="UP"
+                df.at[i,'BOS']="UP"
             
         else
             df.at[i,'dir'] = -1
             p0 = df.at[i, 'close']
             p1 = df["H"].dropna().iloc[-1]
-            P2 = df["L"].dropna().iloc[-1]
+            p2 = df["L"].dropna().iloc[-1]
             df.at[i,'swing'] = p1-p2
             wpr0 = df.at[i, 'wpr']
             wpr1 = df.at[H_idx, 'wpr']
             wpr2 = df.at[L_idx, 'wpr']
 
             if p0<=(p2-buffer) & wpr0<=-50 & wpr2<=-50
-                df.at[i,'BOS_DOWN']="DOWN"
+                df.at[i,'BOS']="DOWN"
             elif p0<=(p2-buffer) & wpr0<=-50 & wpr1<=-50
-                df.at[i,'BOS_DOWN']="DOWN"
+                df.at[i,'BOS']="DOWN"
     return df
 
-def mtf_pivots_with_direction(df, left=40, right=40):
+def TFMS(df, left=20, right=20):
     highs = df['high'].values
     lows = df['low'].values
-    wprs = wpr(df,40).values
-    n=len(df)
+    close = df['close'].iloc[-1]
 
-    swing_high = np.zeros(n, dtype=bool)
-    swing_low = np.zeros(n, dtype=bool)
-    
-    pivots = []  # (index, price, type, wpr)
-    
+    df['swing_tf'] = np.nan  # last swing length
+    df['dir_tf'] = np.nan    # 1 = up, -1 = down
+    df["H_tf"] = np.nan        # pivot high
+    df["L_tf"] =np.nan        # pivot low
 
+    df["Risk_Long"]  =  np.nan  # Risk long
+    df["ST_Long"]    =  np.nan  # Stop Loss Long
+    df["Risk_Short"] =  np.nan  # Risk short
+    df["ST_Short"]   =  np.nan  # Stop Loss Short
+    df["lowest"]   =  np.nan  # last swing length
+    df["highest"]   =  np.nan  # last swing length
+    
     for i in range(left, len(df) - right):
 
         window_high = highs[i-left:i+right+1]
@@ -101,98 +106,32 @@ def mtf_pivots_with_direction(df, left=40, right=40):
         is_pivot_low  = lows[i]  == window_low.min()
 
         if is_pivot_high:
-            pivots.append({"idx":i, "price":highs[i], "type":'H', "wpr":wprs[i]})
-            swing_high[i] = True
- 
+            df.at[i, 'H_tf'] = highs[i]
+            H_idx = i
+            
         elif is_pivot_low:
-            pivots.append({"idx":i, "price":lows[i], "type":'L', "wpr":wprs[i]})
-            swing_low[i] = True
-
-    zz = pd.DataFrame(pivots, columns=["idx", "price", "type", "wpr"])
-
-    # Sort pivots just in case
-    zz = zz.sort_values("idx")
-    zz = zz[zz['type'] != zz['type'].shift()]
-
-    zigzag_series = [None] * len(df)
-
-    # Connect pivots
-    for i in range(len(zz) - 1):
-        start_idx = int(zz.iloc[i]['idx'])
-        end_idx = int(zz.iloc[i+1]['idx'])
-
-        start_price = zz.iloc[i]['price']
-        end_price = zz.iloc[i+1]['price']
-
-        # Linear interpolation between pivots
-        steps = end_idx - start_idx
-        for j in range(steps + 1):
-            t = j / steps if steps != 0 else 0
-            zigzag_series[start_idx + j] = start_price + t * (end_price - start_price)
-
-    df['ZigZag1'] = zigzag_series
-    df["H1"] = swing_high
-    df["L1"] = swing_low
-    
-    return df
-
-def detect_bos(df, buffer:float):
-    n = len(df)
-    bl = np.zeros(n, dtype=float)
-    bos_up = np.zeros(n, dtype=bool)
-    bos_down = np.zeros(n, dtype=bool)
-    
-    last_high_arr = np.full(n, np.nan)
-    last_low_arr = np.full(n, np.nan)
-
-    for i in range(n):
-        sub = df.iloc[:i+1]
-
-        highs = sub.loc[sub['H']]
-        lows = sub.loc[sub['L']]
-        
-
-        if highs.empty or lows.empty:
-            continue
-
-        idx_high = highs.index[-1]
-        idx_low = lows.index[-1]
-
-        last_high = df.loc[idx_high, 'high']
-        last_low = df.loc[idx_low, 'low']
-
-        # guardar en arrays
-        last_high_arr[i] = last_high
-        last_low_arr[i] = last_low
-
-        if idx_high > idx_low:
-            bl[i] = last_low
-
-            if (df["close"].iloc[i] < bl[i]-buffer and
-                df["wpr"].iloc[i] < -50):
-                bos_down[i] = True
-
-            elif (df["close"].iloc[i] < bl[i] and
-                df["wpr"].loc[idx_high] < -50):
-                bos_down[i] = True
-
-        else:
-            bl[i] = last_high
-
-            if (df["close"].iloc[i] > bl[i]+buffer and
-                df["wpr"].iloc[i] > -50):
-                bos_up[i] = True
-
-            elif (df["close"].iloc[i] > bl[i] and
-                df["wpr"].loc[idx_low] > -50):
-                bos_up[i] = True
-
-
-    df["BL"] = bl
-    df["BOS_DOWN"] = bos_down
-    df["BOS_UP"] = bos_up
-    #df["last_swing_high"] = last_high_arr
-    #df["last_swing_low"] = last_low_arr
+            df.at[i, 'L_tf'] = lows[i]
+            L_idx = i
+                    
+        if H_idx < L_idx:
+            df.at[i,'dir_tf'] = 1
+            p0 = df.at[i, 'close']
+            p1 = df["L_tf"].dropna().iloc[-1]
+            p2 = df["H_tf"].dropna().iloc[-1]
+            df.at[i,'swing_tf'] = p2-p1
+            wpr0 = df.at[i, 'wpr']
+            wpr1 = df.at[L_idx, 'wpr']
+            wpr2 = df.at[H_idx, 'wpr']
+            
+        else
+            df.at[i,'dir'] = -1
+            p0 = df.at[i, 'close']
+            p1 = df["H_tf"].dropna().iloc[-1]
+            p2 = df["L_tf"].dropna().iloc[-1]
+            df.at[i,'swing'] = p1-p2
+            wpr0 = df.at[i, 'wpr']
+            wpr1 = df.at[H_idx, 'wpr']
+            wpr2 = df.at[L_idx, 'wpr']
 
     return df
 
