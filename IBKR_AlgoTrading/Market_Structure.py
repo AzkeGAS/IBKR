@@ -22,7 +22,7 @@ def main_indicator(df):
 
     return df
 
-def pivots_with_direction(df, left=1, right=1):
+def ZZ_df(df, left=1, right=1):
     highs = df['high'].values
     lows = df['low'].values
     close = df['close'].iloc[-1]
