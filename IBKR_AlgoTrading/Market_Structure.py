@@ -22,12 +22,11 @@ def main_indicator(df):
 
     return df
 
-def HFMS(df, left=1, right=1):
+def HFMS(df, left=1, right=1): # High frequency ZigZag and BOS check
     highs = df['high'].values
     lows = df['low'].values
     close = df['close'].iloc[-1]
 
-    df['swing'] = np.nan  # last swing length
     df['dir'] = np.nan    # 1 = up, -1 = down
     df["H"] = np.nan        # pivot high
     df["L"] =np.nan        # pivot low
@@ -54,7 +53,6 @@ def HFMS(df, left=1, right=1):
             p0 = df.at[i, 'close']
             p1 = df["L"].dropna().iloc[-1]
             p2 = df["H"].dropna().iloc[-1]
-            df.at[i,'swing'] = p2-p1
             wpr0 = df.at[i, 'wpr']
             wpr1 = df.at[L_idx, 'wpr']
             wpr2 = df.at[H_idx, 'wpr']
@@ -69,7 +67,6 @@ def HFMS(df, left=1, right=1):
             p0 = df.at[i, 'close']
             p1 = df["H"].dropna().iloc[-1]
             p2 = df["L"].dropna().iloc[-1]
-            df.at[i,'swing'] = p1-p2
             wpr0 = df.at[i, 'wpr']
             wpr1 = df.at[H_idx, 'wpr']
             wpr2 = df.at[L_idx, 'wpr']
@@ -80,7 +77,7 @@ def HFMS(df, left=1, right=1):
                 df.at[i,'BOS']="DOWN"
     return df
 
-def TFMS(df, left=20, right=20):
+def TFMS(df, left=20, right=20):    #Low frequency ZigZag and Risk assessment
     highs = df['high'].values
     lows = df['low'].values
     close = df['close'].iloc[-1]
@@ -114,24 +111,34 @@ def TFMS(df, left=20, right=20):
             L_idx = i
                     
         if H_idx < L_idx:
-            df.at[i,'dir_tf'] = 1
-            p0 = df.at[i, 'close']
-            p1 = df["L_tf"].dropna().iloc[-1]
-            p2 = df["H_tf"].dropna().iloc[-1]
-            df.at[i,'swing_tf'] = p2-p1
-            wpr0 = df.at[i, 'wpr']
-            wpr1 = df.at[L_idx, 'wpr']
-            wpr2 = df.at[H_idx, 'wpr']
+            df.at[i,'dir_tf'] = -1
+            p0 = df.loc[H_idx:, 'low'].min()
+            p1 = df["H_tf"].dropna().iloc[-1]
+            p2 = df["L_tf"].dropna().iloc[-1]
+            df.at[i,'swing_tf'] = p1-p2
+            wpr_tf = df.at[i, 'wpr']
+            
+            ST_Short = p1 + abs(p1 - p2) * (RM / 100)
+            ST_Long  = p0 - abs(p1 - p0) * (RM / 100)
+
+            # calcular riesgo
+            Risk_Short = (ST_Short - close) / ST_Short * 100
+            Risk_Long  = (close - ST_Long) / ST_Long * 100
             
         else
-            df.at[i,'dir'] = -1
-            p0 = df.at[i, 'close']
+            df.at[i,'dir'] = 1
+            p0 = df.loc[L_idx:, 'high'].max()
             p1 = df["H_tf"].dropna().iloc[-1]
             p2 = df["L_tf"].dropna().iloc[-1]
             df.at[i,'swing'] = p1-p2
-            wpr0 = df.at[i, 'wpr']
-            wpr1 = df.at[H_idx, 'wpr']
-            wpr2 = df.at[L_idx, 'wpr']
+            wpr_tf = df.at[i, 'wpr']
+
+            ST_Long = p1 + abs(p1 - p2) * (RM / 100)
+            ST_Short  = p0 - abs(p1 - p0) * (RM / 100)
+
+            # calcular riesgo
+            Risk_Short = (ST_Short - close) / ST_Short * 100
+            Risk_Long  = (close - ST_Long) / ST_Long * 100
 
     return df
 
