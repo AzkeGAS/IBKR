@@ -1,11 +1,17 @@
 
 import pandas as pd
-
-df_6M = pd.read_csv("DAX_Long_signals_Data.csv")
-runups = df_6M["runup"].dropna()
-drawdowns = df_6M["drawdown"].dropna()
-
-stop_points = df['ST_Long']
+if df['signal'] == "Long"
+  df_6M = pd.read_csv("DAX_Long_signals_Data.csv")
+  runups = df_6M["runup"].dropna()
+  drawdowns = df_6M["drawdown"].dropna()
+  stop_points = df['ST_Long']
+elif df['signal'] == "Short"
+  df_6M = pd.read_csv("DAX_Short_signals_Data.csv")
+  runups = df_6M["runup"].dropna()
+  drawdowns = df_6M["drawdown"].dropna()
+  stop_points = df['ST_Short']
+else
+  return
 
 # Probability Drawdown Exceeds the Profit and Stop
 
@@ -14,4 +20,4 @@ P_stop_hit = (drawdowns > stop_points).mean()
 
 if P_profit_hit >= P_stop_hit and P_stop_hit <= 0.5
   df['Tadrable'] = "True"
-  print("Long tradable:", stop_points)
+  print("Signal is tradable:")
