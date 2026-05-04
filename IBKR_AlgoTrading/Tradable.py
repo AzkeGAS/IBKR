@@ -7,9 +7,11 @@ drawdowns = df_6M["drawdown"].dropna()
 
 stop_points = df['ST_Long']
 
-P_take_hit = (runups > stop_points).mean()
+# Probability Drawdown Exceeds the Profit and Stop
+
+P_profit_hit = (runups > stop_points).mean()
 P_stop_hit = (drawdowns > stop_points).mean()
 
-if P_take_hit >= P_stop_hit and P_stop_hit <= 0.5
+if P_profit_hit >= P_stop_hit and P_stop_hit <= 0.5
   df['Tadrable'] = "True"
   print("Long tradable:", stop_points)
