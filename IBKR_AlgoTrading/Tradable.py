@@ -13,7 +13,7 @@ elif df['signal'] == "Short"
 else
   return
 
-# Probability to Exceeding the Profit and Stop
+# Probability  Profit and Stop exceed the target
 P_profit_hit = (runups > stop_points).mean()
 P_stop_hit = (drawdowns > stop_points).mean()
 
