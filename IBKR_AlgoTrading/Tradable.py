@@ -1,12 +1,12 @@
 
 import pandas as pd
 if df['signal'] == "Long"
-  df_6M = pd.read_csv("DAX_Long_signals_Data.csv")
+  df_5Y = pd.read_csv("DAX_Long_signals_Data.csv")
   runups = df_6M["runup"].dropna()
   drawdowns = df_6M["drawdown"].dropna()
   stop_points = df['ST_Long_distance']
 elif df['signal'] == "Short"
-  df_6M = pd.read_csv("DAX_Short_signals_Data.csv")
+  df_5Y = pd.read_csv("DAX_Short_signals_Data.csv")
   runups = df_6M["runup"].dropna()
   drawdowns = df_6M["drawdown"].dropna()
   stop_points = df['ST_Short_distance']
