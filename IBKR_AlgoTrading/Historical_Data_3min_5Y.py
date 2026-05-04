@@ -1,8 +1,7 @@
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
-import threading
-import time
+import threading, time
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -18,74 +17,71 @@ class IBApp(EWrapper, EClient):
             bar.high,
             bar.low,
             bar.close,
-            bar.volume
+            bar.volume,
+            reqId
         ])
-
-    def historicalDataEnd(self, reqId, start, end):
-        print(f"Finished request {reqId}: {start} -> {end}")
 
 def run_loop(app):
     app.run()
 
-# -------------------------------------------------
-
+# --------------------------------------------------
 app = IBApp()
-app.connect("127.0.0.1", 7497, clientId=1)
-
-thread = threading.Thread(target=run_loop, args=(app,), daemon=True)
-thread.start()
-
+app.connect("127.0.0.1", 7497, clientId=20)
+threading.Thread(target=run_loop, args=(app,), daemon=True).start()
 time.sleep(1)
 
-# -------------------------------------------------
-# Contract definition
-contract = Contract()
-contract.symbol = "FDAX"
-contract.secType = "FUT"
-contract.exchange = "EUREX"
-contract.currency = "EUR"
-contract.lastTradeDateOrContractMonth = "202506"
-contract.multiplier = "25"
+# --------------------------------------------------
+def mini_dax_contract(yyyymm):
+    c = Contract()
+    c.symbol = "FDXM"
+    c.secType = "FUT"
+    c.exchange = "EUREX"
+    c.currency = "EUR"
+    c.lastTradeDateOrContractMonth = yyyymm
+    c.multiplier = "5"
+    return c
 
+# --------------------------------------------------
+start_year = 2021
+end_year = 2026
+contracts = quarterly_contracts(start_year, end_year)
 
-# -------------------------------------------------
-# Request historical data in chunks
 reqId = 1
-end_date = datetime.utcnow()
-start_limit = end_date - timedelta(days=365 * 5)
 
-while end_date > start_limit:
-    end_str = end_date.strftime("%Y%m%d %H:%M:%S")
+for cm in contracts:
+    expiry = datetime.strptime(cm + "15", "%Y%m%d")
+    roll = expiry - timedelta(days=7)
 
-    app.reqHistoricalData(
-        reqId=reqId,
-        contract=contract,
-        endDateTime=end_str,
-        durationStr="1 W",          # max safe window
-        barSizeSetting="3 mins",
-        whatToShow="TRADES",
-        useRTH=0,
-        formatDate=1,
-        keepUpToDate=False,
-        chartOptions=[]
-    )
+    start = roll - timedelta(days=90)
+    end = roll
 
-    reqId += 1
-    time.sleep(12)  # ✅ pacing safety
+    while end > start:
+        app.reqHistoricalData(
+            reqId=reqId,
+            contract=mini_dax_contract(cm),
+            endDateTime=end.strftime("%Y%m%d %H:%M:%S"),
+            durationStr="1 W",
+            barSizeSetting="3 mins",
+            whatToShow="TRADES",
+            useRTH=0,
+            formatDate=1,
+            keepUpToDate=False,
+            chartOptions=[]
+        )
 
-    end_date -= timedelta(weeks=1)
+        reqId += 1
+        time.sleep(12)   # ✅ pacing safe
+        end -= timedelta(weeks=1)
 
-# -------------------------------------------------
-# Save result
+# --------------------------------------------------
 df = pd.DataFrame(
     app.data,
-    columns=["DateTime", "Open", "High", "Low", "Close", "Volume"]
+    columns=["DateTime", "Open", "High", "Low", "Close", "Volume", "ContractID"]
 )
 
 df["DateTime"] = pd.to_datetime(df["DateTime"])
 df.sort_values("DateTime", inplace=True)
-
-df.to_csv("DAX_FUT_3min_5Y.csv", index=False)
-print("Saved DAX_FUT_3min_5Y.csv")
+df.to_csv("FDXM_continuous_3min.csv", index=False)
 
 app.disconnect()
+print("✅ Continuous Mini‑DAX saved")
