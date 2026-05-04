@@ -19,4 +19,4 @@ P_stop_hit = (drawdowns > stop_points).mean()
 
 if P_profit_hit >= P_stop_hit and P_stop_hit <= 0.5
   df['Tadrable'] = "True"
-  print("Signal is tradable")
+  print("Signal sthocastically tradable")
