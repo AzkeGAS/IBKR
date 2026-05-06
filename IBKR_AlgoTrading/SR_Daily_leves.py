@@ -2,15 +2,6 @@ import pandas as pd
 import numpy as np
 
 
-df_1d = df.resample('1D', label='right', closed='right').agg({
-    'open': 'first',
-    'high': 'max',
-    'low': 'min',
-    'close': 'last',
-    'volume': 'sum'
-}).dropna()
-
-series = df_1d
 
 def pivot_high(series, left, right):
     pivots = np.full(len(series), np.nan)
@@ -40,6 +31,14 @@ def pivot_low(series, left, right):
     return pd.Series(pivots, index=series.index)
 
 def SR_levels (df, swingSizeL = 2, swingSizeL = 2)
+
+    df_1d = df.resample('1D', label='right', closed='right').agg({
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }).dropna()
     
     df['pivHi'] = pivot_high(df_1d['high'], swingSizeL, swingSizeR).shift(-swingSizeR)
     df['pivLo'] = pivot_low(df_1d['low'],  swingSizeL, swingSizeR).shift(-swingSizeR)
@@ -56,4 +55,5 @@ def SR_levels (df, swingSizeL = 2, swingSizeL = 2)
     
     pivots_subset = pivots.iloc[2:6]
     print(pivots_subset)
+    
     return pivots_subset
