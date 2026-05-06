@@ -1,6 +1,17 @@
 import pandas as pd
 import numpy as np
 
+df_new = pd.read_csv("data.csv")
+df_new["date"] = pd.to_datetime(df_new["date"])
+df_historic["date"] = pd.to_datetime(df_historic["date"])
+
+df = (
+    pd.concat([df_historic, df_new])
+      .drop_duplicates(subset=["id", "date"], keep="last")
+      .sort_values("date")
+      .reset_index(drop=True)
+)
+
 class SR_Levels()
     def __init__(self):
         self.pivots_subset = np.nan
