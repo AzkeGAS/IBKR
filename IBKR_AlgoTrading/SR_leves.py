@@ -18,7 +18,6 @@ class SR_Levels()
     
         return pd.Series(pivots, index=series.index)
     
-    
     def pivot_low(series, left, right):
         pivots = np.full(len(series), np.nan)
     
