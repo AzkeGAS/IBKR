@@ -32,7 +32,7 @@ class SR_Daily()
     
         return pd.Series(pivots, index=series.index)
     
-    def SR_levels (df, swingSizeL = 2, swingSizeL = 2)
+    def SR_Daily_levels (df, swingSizeL = 2, swingSizeL = 2)
     
         df_1d = df.resample('1D', label='right', closed='right').agg({
                 'open': 'first',
