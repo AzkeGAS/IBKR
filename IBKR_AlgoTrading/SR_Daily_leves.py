@@ -3,7 +3,7 @@ import numpy as np
 
 class SR_Daily()
     def __init__(self):
-
+        self.pivots_subset = np.nan
         
     def pivot_high(series, left, right):
         pivots = np.full(len(series), np.nan)
@@ -55,7 +55,7 @@ class SR_Daily()
               .assign(type='LOW')
         ]).sort_index()
         
-        pivots_subset = pivots.iloc[2:6]
-        print(pivots_subset)
+        self.pivots_subset = pivots.iloc[2:6]
+        print(self.pivots_subset)
         
-        return pivots_subset
+        return self.pivots_subset
