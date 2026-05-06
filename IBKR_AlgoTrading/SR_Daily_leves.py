@@ -39,21 +39,21 @@ def pivot_low(series, left, right):
 
     return pd.Series(pivots, index=series.index)
 
-swingSizeL = 2
-swingSizeR = 2
-
-df['pivHi'] = pivot_high(df_1d['high'], swingSizeL, swingSizeR).shift(-swingSizeR)
-df['pivLo'] = pivot_low(df_1d['low'],  swingSizeL, swingSizeR).shift(-swingSizeR)
-
-pivots = pd.concat([
-    df.loc[df['pivHi'].notna(), ['pivHi']]
-      .rename(columns={'pivHi': 'price'})
-      .assign(type='HIGH'),
-
-    df.loc[df['pivLo'].notna(), ['pivLo']]
-      .rename(columns={'pivLo': 'price'})
-      .assign(type='LOW')
-]).sort_index()
-
-pivots_subset = pivots.iloc[2:6]
-print(pivots_subset)
+def SR_levels (df, swingSizeL = 2, swingSizeL = 2)
+    
+    df['pivHi'] = pivot_high(df_1d['high'], swingSizeL, swingSizeR).shift(-swingSizeR)
+    df['pivLo'] = pivot_low(df_1d['low'],  swingSizeL, swingSizeR).shift(-swingSizeR)
+    
+    pivots = pd.concat([
+        df.loc[df['pivHi'].notna(), ['pivHi']]
+          .rename(columns={'pivHi': 'price'})
+          .assign(type='HIGH'),
+    
+        df.loc[df['pivLo'].notna(), ['pivLo']]
+          .rename(columns={'pivLo': 'price'})
+          .assign(type='LOW')
+    ]).sort_index()
+    
+    pivots_subset = pivots.iloc[2:6]
+    print(pivots_subset)
+    return pivots_subset
