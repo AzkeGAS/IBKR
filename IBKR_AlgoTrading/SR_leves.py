@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-class SR_Daily()
+class SR_Levels()
     def __init__(self):
         self.pivots_subset = np.nan
         
@@ -55,7 +55,7 @@ class SR_Daily()
               .assign(type='LOW')
         ]).sort_index()
         
-        self.pivots_subset = pivots.iloc[2:6]
+        self.pivots_subset = pivots.iloc[1:4]
         print(self.pivots_subset)
         
         return self.pivots_subset
