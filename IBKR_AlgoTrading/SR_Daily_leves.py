@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 
 class SR_Daily()
+    def __init__(self):
 
+        
     def pivot_high(series, left, right):
         pivots = np.full(len(series), np.nan)
     
