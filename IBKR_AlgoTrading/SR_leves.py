@@ -52,20 +52,19 @@ class SR_Levels()
                 'volume': 'sum'
             }).dropna()
         
-        df['pivHi'] = pivot_high(df_1d['high'], swingSizeL, swingSizeR).shift(-swingSizeR)
-        df['pivLo'] = pivot_low(df_1d['low'],  swingSizeL, swingSizeR).shift(-swingSizeR)
+        df_1d['pivHi'] = pivot_high(df_1d['high'], swingSizeL, swingSizeR)
+        df_1d['pivLo'] = pivot_low(df_1d['low'],  swingSizeL, swingSizeR)
         
         pivots = pd.concat([
-            df.loc[df['pivHi'].notna(), ['pivHi']]
+            df_1d.loc[df_1d['pivHi'].notna(), ['pivHi']]
               .rename(columns={'pivHi': 'price'})
               .assign(type='HIGH'),
         
-            df.loc[df['pivLo'].notna(), ['pivLo']]
+            df_1d.loc[df_1d['pivLo'].notna(), ['pivLo']]
               .rename(columns={'pivLo': 'price'})
               .assign(type='LOW')
         ]).sort_index()
         
-        self.pivots_subset = pivots.iloc[1:4]
-        print(self.pivots_subset)
+        last_pivots = pivots.tail(6)
         
         return self.pivots_subset
