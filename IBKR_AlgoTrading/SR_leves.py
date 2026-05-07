@@ -73,7 +73,11 @@ class SR_Levels()
 
     def Tradable(df, df_1d, last_SR)
         if df_1d['open']<last_SR and df['low']<last_SR
-            df[tradable_long]= True
+            df[tradable_long] = True
         if df_1d['open']>last_SR and df['high']>last_SR
-            df[tradable_short]= True
+            df[tradable_short] = True
+        if new df_1d candlestick
+            df[tradable_long] = False
+            df[tradable_short] = False
+        
         
