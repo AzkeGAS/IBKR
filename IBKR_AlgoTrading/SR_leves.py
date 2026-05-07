@@ -65,6 +65,13 @@ class SR_Levels()
               .assign(type='LOW')
         ]).sort_index()
         
-        last_pivots = pivots.tail(6)
+        last_SR = pivots.tail(6)
         
-        return self.pivots_subset
+        return last_SR
+
+    def Tradable(df, df_1d, last_SR)
+        if df_1d['open']<last_SR and df['low']<last_SR
+            df[tradable_long]=="True"
+        if df_1d['open']>last_SR and df['high']>last_SR
+            df[tradable_short]=="True"
+        
