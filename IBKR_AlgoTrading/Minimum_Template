@@ -1,0 +1,158 @@
+from ibapi.client import EClient
+from ibapi.wrapper import EWrapper
+from ibapi.contract import Contract
+from ibapi.order import Order
+
+
+class IBApp(EWrapper, EClient):
+    def __init__(self):
+        EClient.__init__(self, self)
+        self.next_order_id = None
+
+    # ==========================================================
+    # Connection / Lifecycle
+    # ==========================================================
+    def nextValidId(self, orderId: int):
+        print("Connected. Next valid order ID:", orderId)
+        self.next_order_id = orderId
+
+        # ---- CHOOSE WHAT TO RUN ----
+        self.request_account_summary()
+        self.request_positions()
+        self.request_market_data()
+        # self.request_historical_data()
+        # self.place_sample_order()
+
+    def error(self, reqId, errorCode, errorString, *_):
+        print(f"Error. ReqId={reqId} Code={errorCode} Msg={errorString}")
+
+    def connectionClosed(self):
+        print("Connection closed")
+
+    # ==========================================================
+    # Trading
+    # ==========================================================
+    def place_sample_order(self):
+        contract = self.stock_contract("AAPL")
+
+        order = Order()
+        order.action = "BUY"
+        order.orderType = "MKT"
+        order.totalQuantity = 1
+
+        print("Placing order", self.next_order_id)
+        self.placeOrder(self.next_order_id, contract, order)
+        self.next_order_id += 1
+
+    def openOrder(self, orderId, contract, order, orderState):
+        print(f"OpenOrder {orderId} Status={orderState.status}")
+
+    def orderStatus(self, orderId, status, filled, remaining, avgFillPrice, *_):
+        print(
+            f"OrderStatus {orderId} {status} "
+            f"Filled={filled} Remaining={remaining}"
+        )
+
+    def execDetails(self, reqId, contract, execution):
+        print(
+            f"Execution {contract.symbol} "
+            f"{execution.shares} @ {execution.price}"
+        )
+
+    # ==========================================================
+    # Market Data
+    # ==========================================================
+    def request_market_data(self):
+        contract = self.stock_contract("AAPL")
+        print("Requesting market data")
+        self.reqMktData(1, contract, "", False, False, [])
+
+    def tickPrice(self, reqId, tickType, price, attrib):
+        print(f"TickPrice Req={reqId} Type={tickType} Price={price}")
+
+    def tickSize(self, reqId, tickType, size):
+        print(f"TickSize Req={reqId} Type={tickType} Size={size}")
+
+    # ==========================================================
+    # Historical Data
+    # ==========================================================
+    def request_historical_data(self):
+        contract = self.stock_contract("AAPL")
+        print("Requesting historical data")
+
+        self.reqHistoricalData(
+            reqId=2,
+            contract=contract,
+            endDateTime="",
+            durationStr="1 D",
+            barSizeSetting="5 mins",
+            whatToShow="TRADES",
+            useRTH=1,
+            formatDate=1,
+            keepUpToDate=False,
+            chartOptions=[]
+        )
+
+    def historicalData(self, reqId, bar):
+        print(
+            f"Hist {bar.date} "
+            f"O:{bar.open} H:{bar.high} L:{bar.low} C:{bar.close}"
+        )
+
+    def historicalDataEnd(self, reqId, start, end):
+        print("Historical data end")
+
+    # ==========================================================
+    # Account Summary
+    # ==========================================================
+    def request_account_summary(self):
+        print("Requesting account summary")
+        self.reqAccountSummary(
+            reqId=3,
+            groupName="All",
+            tags="CashBalance,NetLiquidation,AvailableFunds"
+        )
+
+    def accountSummary(self, reqId, account, tag, value, currency):
+        print(f"AccountSummary {tag}: {value} {currency}")
+
+    def accountSummaryEnd(self, reqId):
+        print("Account summary end")
+
+    # ==========================================================
+    # Positions
+    # ==========================================================
+    def request_positions(self):
+        print("Requesting positions")
+        self.reqPositions()
+
+    def position(self, account, contract, position, avgCost):
+        print(
+            f"Position {account} {contract.symbol} "
+            f"Qty={position} AvgCost={avgCost}"
+        )
+
+    def positionEnd(self):
+        print("Positions end")
+
+    # ==========================================================
+    # Helpers
+    # ==========================================================
+    @staticmethod
+    def stock_contract(symbol: str) -> Contract:
+        contract = Contract()
+        contract.symbol = symbol
+        contract.secType = "STK"
+        contract.exchange = "SMART"
+        contract.currency = "USD"
+        contract.primaryExchange = "NASDAQ"
+        return contract
+
+
+# ==========================================================
+# Run App
+# ==========================================================
+if __name__ == "__main__":
+    app = IBApp()
+    app.connect("127.0.0.1", 7497, clientId=1)  # paper TWS
+    app.run()
