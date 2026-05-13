@@ -374,10 +374,15 @@ class SignalEngine:
         # Get indices of LONG and SHORT signals
         long_indices = df[df['signal'] == 'LONG'].index.tolist()
         short_indices = df[df['signal'] == 'SHORT'].index.tolist()
+        stop_long_hit = df[df['low'] <= df['ST_Long']].index.tolist()
+        stop_short_hit = df[df['high'] >= df['ST_Short']].index.tolist()
         
         for long_idx in long_indices:
             # Find next SHORT signal after this LONG
             next_shorts = [s for s in short_indices if s > long_idx]
+            # Find next stop loss hit candle after this LONG
+            candidates = [ s for s in stop_long_hit if s > long_idx]
+            next_stop_hit = min(candidates) if candidates else None
             
             if next_shorts:
                 next_short_idx = next_shorts[0]
@@ -404,6 +409,9 @@ class SignalEngine:
         for short_idx in short_indices:
             # Find next LONG signal after this SHORT
             next_longs = [s for s in long_indices if s > short_idx]
+            # Find next stop loss hit candle after this SHORT
+            candidates = [ s for s in stop_short_hit if s > short_idx]
+            next_stop_hit = min(candidates) if candidates else None
             
             if next_longs:
                 next_long_idx = next_longs[0]
