@@ -374,32 +374,30 @@ class SignalEngine:
         # Get indices of LONG and SHORT signals
         long_indices = df[df['signal'] == 'LONG'].index.tolist()
         short_indices = df[df['signal'] == 'SHORT'].index.tolist()
-        stop_long_hit = df[df['low'] <= df['ST_Long']].index.tolist()
-        stop_short_hit = df[df['high'] >= df['ST_Short']].index.tolist()
+        
+        
         
         for long_idx in long_indices:
             # Find next SHORT signal after this LONG
             next_shorts = [s for s in short_indices if s > long_idx]
             # Find next stop loss hit candle after this LONG
+            stop_long_hit = df[df['low'] <= df.loc[long_idx, 'ST_Long']].index.tolist()
             candidates = [ s for s in stop_long_hit if s > long_idx]
             next_stop_hit = min(candidates) if candidates else None
             
-            if next_shorts:
-                next_short_idx = next_shorts[0]
+            if next_stop_hit:
+                next_stop_hitt_idx = next_stop_hit[0]
                 
                 # Get entry price (close at LONG signal)
                 entry_price = df.loc[long_idx, 'close']
-                
-                # Get price range between LONG and SHORT
-                price_high_range = df.loc[long_idx:next_short_idx, 'high'].values
-                price_low_range = df.loc[long_idx:next_short_idx, 'low'].values
+
+                # Get run-up between LONG and Stop Loss
+                price_high_range = df.loc[long_idx:next_stop_hit_idx, 'high'].values
                 
                 # Calculate MAX runup and drawdown (distance, not percentage)
                 max_high = np.max(price_high_range)
                 max_runup = max_high - entry_price
-
-                min_low = np.min(price_low_range)
-                max_drawdown = entry_price - min_low
+                max_drawdown = entry_price - df.loc[long_idx, 'ST_Long']
 
                 # Store results
                 df.loc[long_idx, 'run-up'] = max_runup
@@ -410,24 +408,22 @@ class SignalEngine:
             # Find next LONG signal after this SHORT
             next_longs = [s for s in long_indices if s > short_idx]
             # Find next stop loss hit candle after this SHORT
+            stop_short_hit = df[df['high'] >= df[short_idx,'ST_Short']].index.tolist()
             candidates = [ s for s in stop_short_hit if s > short_idx]
             next_stop_hit = min(candidates) if candidates else None
             
             if next_longs:
-                next_long_idx = next_longs[0]
+                next_stop_hit_idx = next_stop_hit[0]
                 
                 # Get entry price (close at SHORT signal)
                 entry_price = df.loc[short_idx, 'close']
                 
                 # Get price range between LONG and SHORT
-                price_high_range = df.loc[short_idx:next_long_idx, 'high'].values
-                price_low_range = df.loc[short_idx:next_long_idx, 'low'].values
+                price_low_range = df.loc[short_idx:next_stop_hit_idx, 'low'].values
                 
-                # Calculate MAX runup and draw-down (distance, not percentage)
-                max_high = np.max(price_high_range)
-                max_runup = max_high - entry_price
-
+                # Calculate MAX draw-down (distance, not percentage)
                 min_low = np.min(price_low_range)
+                max_runup = df[short_idx,'ST_Short'] - entry_price
                 max_drawdown = entry_price - min_low
 
                 # Store results
