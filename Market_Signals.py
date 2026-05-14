@@ -607,10 +607,10 @@ class SignalEngine:
         df['LT_Trend'] = "Not Applicable"
     
         # LONG condition
-        df.loc[df['wpr_D'] >= -28, 'LT_Trend'] = "LONG"
+        df.loc[df['wpr_D'] >= -28, 'LT_Trend'] = "BULLISH"
     
         # SHORT condition
-        df.loc[df['wpr_D'] <= -72, 'LT_Trend'] = "SHORT"
+        df.loc[df['wpr_D'] <= -72, 'LT_Trend'] = "BEARISH"
     
         # Middle zone
         mid_zone = (df['wpr_D'] > -72) & (df['wpr_D'] < -28)
@@ -619,8 +619,8 @@ class SignalEngine:
         rising = df['wpr_D'].diff() > 0
         falling = df['wpr_D'].diff() < 0
     
-        df.loc[mid_zone & rising, 'LT_Trend'] = "LONG"
-        df.loc[mid_zone & falling, 'LT_Trend'] = "SHORT"
+        df.loc[mid_zone & rising, 'LT_Trend'] = "BULLISH"
+        df.loc[mid_zone & falling, 'LT_Trend'] = "BEARISH"
 
         return df
 
