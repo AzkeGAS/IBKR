@@ -337,9 +337,9 @@ class SignalEngine:
 
         df = df.copy() 
         # --- Conditions ---
-        long_confirmed = ((df["signal"] == "LONG") & (df["Tradable"] == True))
+        long_confirmed = ((df["signal"] == "LONG") & (df["Tradable"] == True) & (df['Over_Bought_Sold'] == "BUY"))
     
-        short_confirmed = ((df["signal"] == "SHORT") & (df["Tradable"] == True))
+        short_confirmed = ((df["signal"] == "SHORT") & (df["Tradable"] == True) & (df['Over_Bought_Sold'] == "SELL"))
 
 
         # --- Raw signals (vectorized) ---
@@ -569,7 +569,37 @@ class SignalEngine:
                     df.loc[df.index[-1], 'SR_Tradable_Long'] = "LONG"
 
         return df
+
+    def Over_Bought_Sold(df):
+        df.loc[:, 'Over_Bought_Sold'] = np.nan
     
+        TradableLong = False
+        TradableShort = False
+    
+        # Condiciones (esto es vectorial en pandas)
+        if (df['EMA8'] > df['upperBand']).any():
+            TradableLong = False
+            TradableShort = True
+    
+        if TradableShort and (df['confirmed_signal'] == "GO SHORT").any():
+            TradableShort = False
+    
+        if (df['EMA8'] < df['lowerBand']).any():
+            TradableLong = True
+            TradableShort = False
+    
+        if TradableLong and (df['confirmed_signal'] == "GO LONG").any():
+            TradableLong = False
+    
+        if TradableLong:
+            df.loc[:, 'Over_Bought_Sold'] = "SELL"
+        elif TradableShort:
+            df.loc[:, 'Over_Bought_Sold'] = "BUY"
+        else:
+            df.loc[:, 'Over_Bought_Sold'] = "Not Applicable"
+    
+        return df
+        
     def Back_Test_Signals(self, df, buffer, RM):
 
         df = df.copy()
