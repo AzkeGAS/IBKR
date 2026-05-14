@@ -521,10 +521,11 @@ class SignalEngine:
                 'close': 'last',
                 'volume': 'sum'
             }).dropna()
+
+        df.loc[:,'wpr_D'] = self.wpr(df_1d, 40)
         
         df_1d.loc[:,'pivHi'] = self.pivot_high(df_1d['high'], swingSizeL, swingSizeR)
         df_1d.loc[:,'pivLo'] = self.pivot_low(df_1d['low'],  swingSizeL, swingSizeR)
-        df_1d.loc[:,'wpr'] = self.wpr(df_1d, 40)
         
         pivots = pd.concat([
             df_1d.loc[df_1d['pivHi'].notna(), ['pivHi']]
