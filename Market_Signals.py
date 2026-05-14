@@ -350,20 +350,15 @@ class SignalEngine:
 
     def future_return(self, df):
         """
-        Calculate maximum future returns from each LONG signal until the next SHORT signal.
+        Calculate maximum returns from each LONG signal until the next stop hit candle.
         
         For each LONG signal:
         - Find the entry price (close price at LONG signal)
-        - Find the next SHORT signal
-        - Calculate the maximum high between LONG and SHORT (max return)
+        - Find the next stop loss hit candle
+        - Calculate the maximum high between LONG and stop loss hit (max return)
         - Calculate the P50 percentile of highs (realistic return expectations)
-        - Compute returns as price distance (not percentage)
-        
-        Returns:
-            df with new columns:
-            - 'future_long_return': max distance return from LONG entry to max high
-            - 'p50_future_long_return': 50th percentile distance return from LONG to SHORT
-            - 'ST_distance': distance from current close to stop loss (ST_Short)
+
+        Similarly for each SHORT signal
         """
         df = df.copy()
         
@@ -372,10 +367,8 @@ class SignalEngine:
         df.loc[:, 'draw-down'] = np.nan
         
         # Get indices of LONG and SHORT signals
-        long_indices = df[df['signal'] == 'LONG'].index.tolist()
-        short_indices = df[df['signal'] == 'SHORT'].index.tolist()
-        
-        
+        long_indices = df[df['confirmed_signal'] == 'GO LONG'].index.tolist()
+        short_indices = df[df['confirmed_signal'] == 'GO SHORT'].index.tolist()
         
         for long_idx in long_indices:
             # Find next SHORT signal after this LONG
