@@ -629,6 +629,8 @@ class SignalEngine:
 
         df = df.copy()
         df = self.main_indicator(df)
+        df = self.Over_Bought_Sold (df)
+        df = self.SR_Daily_levels(df,2,2)
         df = self.HFMS_vectorized(df, left=1, right=1, buffer=buffer)
         df = self.TFMS_vectorized(df, left=40, right=40, RM=RM, shift_pivots=False)
         df = self.signals_vectorized(df)
