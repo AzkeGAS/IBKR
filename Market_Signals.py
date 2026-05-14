@@ -56,8 +56,7 @@ class SignalEngine:
 
         # ---- WPR ----
         df.loc[:, 'wpr'] = self.wpr(df, 40)
-        df.loc[:, 'wpr_lf'] = self.wpr(df, 800)
-
+        
         return df
 
     # =========================
@@ -601,6 +600,30 @@ class SignalEngine:
             df.loc[:, 'Over_Bought_Sold'] = "Not Applicable"
     
         return df
+
+    def Trend(df):
+        df = df.copy()
+    
+        df['LT_Trend'] = "Not Applicable"
+    
+        # LONG condition
+        df.loc[df['wpr_D'] >= -28, 'LT_Trend'] = "LONG"
+    
+        # SHORT condition
+        df.loc[df['wpr_D'] <= -72, 'LT_Trend'] = "SHORT"
+    
+        # Middle zone
+        mid_zone = (df['wpr_D'] > -72) & (df['wpr_D'] < -28)
+    
+        # Use diff correctly (must call it!)
+        rising = df['wpr_D'].diff() > 0
+        falling = df['wpr_D'].diff() < 0
+    
+        df.loc[mid_zone & rising, 'LT_Trend'] = "LONG"
+        df.loc[mid_zone & falling, 'LT_Trend'] = "SHORT"
+
+        return df
+
         
     def Back_Test_Signals(self, df, buffer, RM):
 
@@ -617,12 +640,13 @@ class SignalEngine:
         
         df = df.copy()
         df = self.main_indicator(df)
+        df = self.Over_Bought_Sold (df)
+        df = self.SR_Daily_levels(df,2,2)
         df = self.HFMS_vectorized(df, left=1, right=1, buffer=buffer)
         df = self.TFMS_vectorized(df, left=40, right=40, RM=RM, shift_pivots=False)
         df = self.signals_vectorized(df)
         df = self.StochasticTradable(df)
         df = self.tradable_signals(df)
-        df = self.SR_Daily_levels(df,2,2)
    
         return df
     
