@@ -72,6 +72,7 @@ def swing_statistics(swings):
             'count': len(subset),
             'avg_move': subset['points'].mean(),
             'median_move': subset['points'].median(),
+            'volatitiy_move': subset['points'].stdv(),
             'max_move': subset['points'].max(),
             'min_move': subset['points'].min(),
             'avg_pct': subset['pct_move'].mean(),
