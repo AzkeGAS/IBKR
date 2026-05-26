@@ -72,7 +72,8 @@ def swing_statistics(swings):
             'count': len(subset),
             'avg_move': subset['points'].mean(),
             'median_move': subset['points'].median(),
-            'volatitiy_move': subset['points'].stdv(),
+            'p25_move': subset['points'].quantile(0.25), 
+            'p75_move': subset['points'].quantile(0.75),  
             'max_move': subset['points'].max(),
             'min_move': subset['points'].min(),
             'avg_pct': subset['pct_move'].mean(),
@@ -88,3 +89,16 @@ swings = classify_swings(swings)
 swings = compute_swing_metrics(swings)
 
 stats = swing_statistics(swings)
+
+import matplotlib.pyplot as plt
+
+bull = swings[swings['direction'] == 'bull']['points']
+bear = swings[swings['direction'] == 'bear']['points']
+
+plt.figure()
+plt.boxplot([bull, bear], labels=['Bull', 'Bear'])
+plt.title('Swing Distribution (Box & Whisker)')
+plt.ylabel('Points')
+plt.xlabel('Direction')
+plt.show()
+
