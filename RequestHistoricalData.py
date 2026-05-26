@@ -103,3 +103,38 @@ print(df_D.tail())
 
 print("\nHourly Data:")
 print(df_H.tail())
+
+
+# Robust 1H Data Collector (Chunked)
+from datetime import datetime, timedelta
+
+def request_hourly_chunks(app, contract):
+    end = ""
+    all_data = []
+
+    for i in range(20):  # ~500 days / 30
+        req_id = 100 + i
+
+        app.reqHistoricalData(
+            reqId=req_id,
+            contract=contract,
+            endDateTime=end,
+            durationStr="30 D",
+            barSizeSetting="1 hour",
+            whatToShow="TRADES",
+            useRTH=1,
+            formatDate=1,
+            keepUpToDate=False,
+            chartOptions=[]
+        )
+
+        time.sleep(3)
+
+        all_data += app.data.get(req_id, [])
+
+        if len(app.data.get(req_id, [])) > 0:
+            earliest = app.data[req_id][0]["datetime"]
+            end = earliest  # step back in time
+
+    return pd.DataFrame(all_data)
+``
