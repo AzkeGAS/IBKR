@@ -523,14 +523,14 @@ class SignalEngine:
         TradableShort = False
     
         # Condiciones (esto es vectorial en pandas)
-        if (df['EMA8'] > df['upperBand']).any():
+        if (df['EMA8'] > df['UpperBand']).any():
             TradableLong = False
             TradableShort = True
     
         if TradableShort and (df['confirmed_signal'] == "GO SHORT").any():
             TradableShort = False
     
-        if (df['EMA8'] < df['lowerBand']).any():
+        if (df['EMA8'] < df['LowerBand']).any():
             TradableLong = True
             TradableShort = False
     
