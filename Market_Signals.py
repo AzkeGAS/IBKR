@@ -247,7 +247,6 @@ class SignalEngine:
     
         return df
 
-    
     def signals_vectorized(self,df):
 
         df = df.copy()
@@ -290,93 +289,6 @@ class SignalEngine:
         df.loc[:, "confirmed_signal"] = np.where(long_confirmed, "GO LONG",
                             np.where(short_confirmed, "GO SHORT", None))
 
-        return df
-
-    def future_return(self, df):
-        """
-        Calculate maximum returns from each LONG signal until the next stop hit candle.
-        
-        For each LONG signal:
-        - Find the entry price (close price at LONG signal)
-        - Find the next stop loss hit candle
-        - Calculate the maximum high between LONG and stop loss hit (max return)
-        - Calculate the P50 percentile of highs (realistic return expectations)
-
-        Similarly for each SHORT signal
-        """
-        df = df.copy()
-        
-        # Initialize new columns
-        df.loc[:, 'run-up'] = np.nan
-        df.loc[:, 'draw-down'] = np.nan
-        
-        # Get indices of LONG and SHORT signals
-        long_indices = df[df['confirmed_signal'] == 'GO LONG'].index.tolist()
-        short_indices = df[df['confirmed_signal'] == 'GO SHORT'].index.tolist()
-        
-        for long_idx in long_indices:
-            # Find next SHORT signal after this LONG
-            next_shorts = [s for s in short_indices if s > long_idx]
-            # Find next stop loss hit candle after this LONG
-            stop_long_hit = df[df['low'] <= df.loc[long_idx, 'ST_Long']].index.tolist()
-            candidates = [ s for s in stop_long_hit if s > long_idx]
-            next_stop_hit = min(candidates) if candidates else None
-            
-            if next_stop_hit:
-                next_stop_hitt_idx = next_stop_hit[0]
-                
-                # Get entry price (close at LONG signal)
-                entry_price = df.loc[long_idx, 'close']
-
-                # Get run-up between LONG and Stop Loss
-                price_high_range = df.loc[long_idx:next_stop_hit_idx, 'high'].values
-                
-                # Calculate MAX runup and drawdown (distance, not percentage)
-                max_high = np.max(price_high_range)
-                max_runup = max_high - entry_price
-                max_drawdown = entry_price - df.loc[long_idx, 'ST_Long']
-
-                # Store results
-                df.loc[long_idx, 'run-up'] = max_runup
-                df.loc[long_idx, 'draw-down'] = max_drawdown
-
-
-        for short_idx in short_indices:
-            # Find next LONG signal after this SHORT
-            next_longs = [s for s in long_indices if s > short_idx]
-            # Find next stop loss hit candle after this SHORT
-            stop_short_hit = df[df['high'] >= df[short_idx,'ST_Short']].index.tolist()
-            candidates = [ s for s in stop_short_hit if s > short_idx]
-            next_stop_hit = min(candidates) if candidates else None
-            
-            if next_longs:
-                next_stop_hit_idx = next_stop_hit[0]
-                
-                # Get entry price (close at SHORT signal)
-                entry_price = df.loc[short_idx, 'close']
-                
-                # Get price range between LONG and SHORT
-                price_low_range = df.loc[short_idx:next_stop_hit_idx, 'low'].values
-                
-                # Calculate MAX draw-down (distance, not percentage)
-                min_low = np.min(price_low_range)
-                max_runup = df[short_idx,'ST_Short'] - entry_price
-                max_drawdown = entry_price - min_low
-
-                # Store results
-                df.loc[short_idx, 'run-up'] = max_runup
-                df.loc[short_idx, 'draw-down'] = max_drawdown
-
-
-        # Export signals to CSV after processing all signals
-        subset_long = df[df['signal'] == 'LONG']
-        subset_long.to_csv("DAX_Long_Signal_Data.csv", index=True)
-        #print(subset_long[['time', 'close', 'future_long_return', 'p50_future_long_return', 'ST_Long_distance']].tail(5))
-
-        subset_short = df[df['signal'] == 'SHORT']
-        subset_short.to_csv("DAX_Short_Signal_Data.csv", index=True)        
-        #print(subset_short[['time', 'close', 'future_short_return', 'p50_future_short_return', 'ST_Short_distance']].tail(5))
-        
         return df
     
     def StochasticTradable(self, df):
@@ -570,31 +482,125 @@ class SignalEngine:
         return df
 
         
-    def Back_Test_Signals(self, df, buffer, RM):
+    def Back_Test_Signals(self, df1, df2, df3):           
 
-        df = df.copy()
-        df = self.main_indicator(df)
-        df = self.multi_timeframe_zigzag(df1, df2):
-        df = self.BOS_detection(df, buffer=3)
-        df = self.SL_RA(df, RM=10)
-        df = self.Over_Bought_Sold (df)
-        df = self.SR_Daily_levels(df3,2,2)
-        df = self.signals_vectorized(df)
-        df = self.future_return(df)
-
+        df = df1.copy()                                   #df1 = 3min
+        df2 = df2.copy()                                  #df2 = 1H
+        df3 = df3.copy()                                  #df3 = 1D
+        df = self.main_indicator(df)                      #Basic EMAs, Bollinger Bands and Williams period
+        df = self.multi_timeframe_zigzag(df1, df2)        #Lower(3min) and Higher(1H) frequency ZigZag 
+        df = self.BOS_detection(df, buffer=3)             # Breaking of Structure pattern detection
+        df = self.signals_vectorized(df)                  # Entry signal without confirmation
+        df = self.future_return(df)                       # P50 Admissible Risk and Reward
+        df = self.SL_RA(df, RM=10)                        # Stop Loss and Risk Assessment based on high frequency zigzag                 
+        df = self.StochasticTradable(df)                  # Risk Assessment
+        df = self.Over_Bought_Sold (df)                   # Market Saturation
+        df = self.SR_Daily_levels(df3,2,2)                # Supporting and Resistance levels on daily basis
+        df = self.tradable_signals(df)                    # Confirmend signals
+        
         return df
     
-    def Real_time_signals(self, df, buffer, RM):
+    def Real_time_signals(self, df1, df2, df3):
         
-        df = df.copy()
-        df = self.main_indicator(df)
-        df = self.Over_Bought_Sold (df)
-        df = self.SR_Daily_levels(df,2,2)
-        df = self.HFMS_vectorized(df, left=1, right=1, buffer=buffer)
-        df = self.TFMS_vectorized(df, left=40, right=40, RM=RM, shift_pivots=False)
-        df = self.signals_vectorized(df)
-        df = self.StochasticTradable(df)
-        df = self.tradable_signals(df)
+        df = df1.copy()                                   #df1 = 3min
+        df2 = df2.copy()                                  #df2 = 1H
+        df3 = df3.copy()                                  #df3 = 1D
+        df = self.main_indicator(df)                      #Basic EMAs, Bollinger Bands and Williams period
+        df = self.multi_timeframe_zigzag(df1, df2)        #Lower(3min) and Higher(1H) frequency ZigZag 
+        df = self.BOS_detection(df, buffer=3)             # Breaking of Structure pattern detection
+        df = self.signals_vectorized(df)                  # Entry signal without confirmation
+        df = self.future_return(df)                       # P50 Admissible Risk and Reward
+        df = self.SL_RA(df, RM=10)                        # Stop Loss and Risk Assessment based on high frequency zigzag                 
+        df = self.StochasticTradable(df)                  # Risk Assessment
+        df = self.Over_Bought_Sold (df)                   # Market Saturation
+        df = self.SR_Daily_levels(df3,2,2)                # Supporting and Resistance levels on daily basis
+        df = self.tradable_signals(df)                    # Confirmend signals
    
         return df
-    
+
+    def future_return(self, df):
+        """
+        Calculate maximum returns from each LONG signal until the next stop hit candle.
+        
+        For each LONG signal:
+        - Find the entry price (close price at LONG signal)
+        - Find the next stop loss hit candle
+        - Calculate the maximum high between LONG and stop loss hit (max return)
+        - Calculate the P50 percentile of highs (realistic return expectations)
+
+        Similarly for each SHORT signal
+        """
+        df = df.copy()
+        
+        # Initialize new columns
+        df.loc[:, 'run-up'] = np.nan
+        df.loc[:, 'draw-down'] = np.nan
+        
+        # Get indices of LONG and SHORT signals
+        long_indices = df[df['confirmed_signal'] == 'GO LONG'].index.tolist()
+        short_indices = df[df['confirmed_signal'] == 'GO SHORT'].index.tolist()
+        
+        for long_idx in long_indices:
+            # Find next SHORT signal after this LONG
+            next_shorts = [s for s in short_indices if s > long_idx]
+            # Find next stop loss hit candle after this LONG
+            stop_long_hit = df[df['low'] <= df.loc[long_idx, 'ST_Long']].index.tolist()
+            candidates = [ s for s in stop_long_hit if s > long_idx]
+            next_stop_hit = min(candidates) if candidates else None
+            
+            if next_stop_hit:
+                next_stop_hitt_idx = next_stop_hit[0]
+                
+                # Get entry price (close at LONG signal)
+                entry_price = df.loc[long_idx, 'close']
+
+                # Get run-up between LONG and Stop Loss
+                price_high_range = df.loc[long_idx:next_stop_hit_idx, 'high'].values
+                
+                # Calculate MAX runup and drawdown (distance, not percentage)
+                max_high = np.max(price_high_range)
+                max_runup = max_high - entry_price
+                max_drawdown = entry_price - df.loc[long_idx, 'ST_Long']
+
+                # Store results
+                df.loc[long_idx, 'run-up'] = max_runup
+                df.loc[long_idx, 'draw-down'] = max_drawdown
+
+
+        for short_idx in short_indices:
+            # Find next LONG signal after this SHORT
+            next_longs = [s for s in long_indices if s > short_idx]
+            # Find next stop loss hit candle after this SHORT
+            stop_short_hit = df[df['high'] >= df[short_idx,'ST_Short']].index.tolist()
+            candidates = [ s for s in stop_short_hit if s > short_idx]
+            next_stop_hit = min(candidates) if candidates else None
+            
+            if next_longs:
+                next_stop_hit_idx = next_stop_hit[0]
+                
+                # Get entry price (close at SHORT signal)
+                entry_price = df.loc[short_idx, 'close']
+                
+                # Get price range between LONG and SHORT
+                price_low_range = df.loc[short_idx:next_stop_hit_idx, 'low'].values
+                
+                # Calculate MAX draw-down (distance, not percentage)
+                min_low = np.min(price_low_range)
+                max_runup = df[short_idx,'ST_Short'] - entry_price
+                max_drawdown = entry_price - min_low
+
+                # Store results
+                df.loc[short_idx, 'run-up'] = max_runup
+                df.loc[short_idx, 'draw-down'] = max_drawdown
+
+
+        # Export signals to CSV after processing all signals
+        subset_long = df[df['signal'] == 'LONG']
+        subset_long.to_csv("DAX_Long_Signal_Data.csv", index=True)
+        #print(subset_long[['time', 'close', 'future_long_return', 'p50_future_long_return', 'ST_Long_distance']].tail(5))
+
+        subset_short = df[df['signal'] == 'SHORT']
+        subset_short.to_csv("DAX_Short_Signal_Data.csv", index=True)        
+        #print(subset_short[['time', 'close', 'future_short_return', 'p50_future_short_return', 'ST_Short_distance']].tail(5))
+        
+        return df
