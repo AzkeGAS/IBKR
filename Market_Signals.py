@@ -128,7 +128,7 @@ class SignalEngine:
         })
     
         # --- Merge (core step) ---
-        df_mtf = pd.merge_asof(
+        df = pd.merge_asof(
             df_3m,
             df_1H_map,
             on='time',
@@ -137,9 +137,9 @@ class SignalEngine:
     
         # --- Forward fill HTF structure ---
         htf_cols = ['H_1H', 'L_1H', 'dir_1H', 'last_H_1H', 'last_L_1H']
-        df_mtf[htf_cols] = df_mtf[htf_cols].ffill()
+        df[htf_cols] = df[htf_cols].ffill()
     
-        return df_mtf
+        return df
 
     def BOS_detection(df, buffer=3):
 
