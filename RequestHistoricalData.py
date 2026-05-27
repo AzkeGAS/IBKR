@@ -9,7 +9,7 @@ class IBHistoricalData(EWrapper, EClient):
 
     def __init__(self):
         EClient.__init__(self, self)
-        self.data = {1: [], 2: []}
+        self.data = {1: [], 2: [], 3: []}
 
     def historicalData(self, reqId, bar):
         self.data[reqId].append({
@@ -57,7 +57,7 @@ app.reqHistoricalData(
     reqId=1,
     contract=contract,
     endDateTime="",
-    durationStr="500 D",
+    durationStr="365 D",
     barSizeSetting="1 day",
     whatToShow="TRADES",
     useRTH=1,
@@ -73,7 +73,7 @@ app.reqHistoricalData(
     reqId=2,
     contract=contract,
     endDateTime="",
-    durationStr="500 D",
+    durationStr="365 D",
     barSizeSetting="1 hour",
     whatToShow="TRADES",
     useRTH=1,
@@ -84,19 +84,38 @@ app.reqHistoricalData(
 
 time.sleep(10)
 
+# ---- Request 1H data (500 days) ----
+app.reqHistoricalData(
+    reqId=3,
+    contract=contract,
+    endDateTime="",
+    durationStr="365 D",
+    barSizeSetting="3 min",
+    whatToShow="TRADES",
+    useRTH=1,
+    formatDate=1,
+    keepUpToDate=False,
+    chartOptions=[]
+)
+
+time.sleep(15)
+
 app.disconnect()
 
 # ---------- Convert to DataFrames ----------
 
 df_D = pd.DataFrame(app.data[1])
 df_H = pd.DataFrame(app.data[2])
+df_M = pd.DataFrame(app.data[3])
 
 # Convert datetime column
 df_D['datetime'] = pd.to_datetime(df_D['datetime'])
 df_H['datetime'] = pd.to_datetime(df_H['datetime'])
+df_M['datetime'] = pd.to_datetime(df_M['datetime'])
 
 df_D.set_index("datetime", inplace=True)
 df_H.set_index("datetime", inplace=True)
+df_M.set_index("datetime", inplace=True
 
 print("Daily Data:")
 print(df_D.tail())
