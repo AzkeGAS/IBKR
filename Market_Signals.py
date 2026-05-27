@@ -99,6 +99,48 @@ class SignalEngine:
 
         return df
 
+    def multi_timeframe_zigzag(self, df_3m, df_1H):
+    
+        # --- Ensure datetime + sorting ---
+        df_3m = df_3m.copy()
+        df_1H = df_1H.copy()
+    
+        df_3m['time'] = pd.to_datetime(df_3m['time'])
+        df_1H['time'] = pd.to_datetime(df_1H['time'])
+    
+        df_3m = df_3m.sort_values('time').reset_index(drop=True)
+        df_1H = df_1H.sort_values('time').reset_index(drop=True)
+    
+        # --- Compute zigzag on both timeframes ---
+        df_3m = self.HFMS_vectorized(df_3m, left=1, right=1)
+    
+        df_1H_zigzag = self.HFMS_vectorized(df_1H, left=2, right=2)
+    
+        # --- Select + rename 1H columns ---
+        cols_to_map = ['time', 'H', 'L', 'dir', 'last_H', 'last_L']
+    
+        df_1H_map = df_1H_zigzag[cols_to_map].copy().rename(columns={
+            'H': 'H_1H',
+            'L': 'L_1H',
+            'dir': 'dir_1H',
+            'last_H': 'last_H_1H',
+            'last_L': 'last_L_1H'
+        })
+    
+        # --- Merge (core step) ---
+        df_mtf = pd.merge_asof(
+            df_3m,
+            df_1H_map,
+            on='time',
+            direction='backward'
+        )
+    
+        # --- Forward fill HTF structure ---
+        htf_cols = ['H_1H', 'L_1H', 'dir_1H', 'last_H_1H', 'last_L_1H']
+        df_mtf[htf_cols] = df_mtf[htf_cols].ffill()
+    
+        return df_mtf
+
     def BOS_detection(df, buffer=3):
 
         df.loc[:, 'H_wpr'] = df['wpr'].where(df['H'].notna()).ffill()
