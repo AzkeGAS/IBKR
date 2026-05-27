@@ -62,7 +62,7 @@ class SignalEngine:
         return df
 
     # =========================
-    # High frequency ZigZag and BOS check
+    # frequency ZigZag 
     # =========================
 
     def HFMS_vectorized(self, df, left=1, right=1):
@@ -147,6 +147,10 @@ class SignalEngine:
     
         return df
 
+    # =========================
+    # BOS check
+    # =========================
+    
     def BOS_detection(df, buffer=3):
 
         df.loc[:, 'H_wpr'] = df['wpr'].where(df['H'].notna()).ffill()
@@ -276,21 +280,6 @@ class SignalEngine:
 
         return df
     
-    def tradable_signals(self,df):
-
-        df = df.copy() 
-        # --- Conditions ---
-        long_confirmed = ((df["signal"] == "LONG") & (df["Tradable"] == True) & (df['Over_Bought_Sold'] == "BUY"))
-    
-        short_confirmed = ((df["signal"] == "SHORT") & (df["Tradable"] == True) & (df['Over_Bought_Sold'] == "SELL"))
-
-
-        # --- Raw signals (vectorized) ---
-        df.loc[:, "confirmed_signal"] = np.where(long_confirmed, "GO LONG",
-                            np.where(short_confirmed, "GO SHORT", None))
-
-        return df
-    
     def StochasticTradable(self, df):
 
         df = df.copy()
@@ -395,7 +384,6 @@ class SignalEngine:
         
         levels = pivots.tail(6)
 
-
         df['SR_Tradable_Long'] = pd.Series(index=df.index, dtype='string')
         df['SR_Tradable_Short'] = pd.Series(index=df.index, dtype='string')
 
@@ -458,19 +446,34 @@ class SignalEngine:
     
         return df
 
-    def Trend(df):
+    def tradable_signals(self,df):
+
+        df = df.copy() 
+        # --- Conditions ---
+        long_confirmed = ((df["signal"] == "LONG") & (df["Tradable"] == True) & (df['Over_Bought_Sold'] == "BUY"))
+    
+        short_confirmed = ((df["signal"] == "SHORT") & (df["Tradable"] == True) & (df['Over_Bought_Sold'] == "SELL"))
+
+
+        # --- Raw signals (vectorized) ---
+        df.loc[:, "confirmed_signal"] = np.where(long_confirmed, "GO LONG",
+                            np.where(short_confirmed, "GO SHORT", None))
+
+        return df
+
+    def Trend(df3):
         df = df.copy()
     
         df['LT_Trend'] = "Not Applicable"
-    
+        wpr3 = self.wpr(df3, 40)
         # LONG condition
-        df.loc[df['wpr_D'] >= -28, 'LT_Trend'] = "BULLISH"
+        df.loc[wpr3 >= -28, 'LT_Trend'] = "BULLISH"
     
         # SHORT condition
-        df.loc[df['wpr_D'] <= -72, 'LT_Trend'] = "BEARISH"
+        df.loc[wpr3 <= -72, 'LT_Trend'] = "BEARISH"
     
         # Middle zone
-        mid_zone = (df['wpr_D'] > -72) & (df['wpr_D'] < -28)
+        mid_zone = (wpr3 > -72) & (wpr3 < -28)
     
         # Use diff correctly (must call it!)
         rising = df['wpr_D'].diff() > 0
