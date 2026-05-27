@@ -2,22 +2,21 @@
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
-from SR_levels import *
 
 # =========================
 # MODULES
 # =========================
-# 
+
 class SignalEngine:
 
     def hlc4(self, df):
         return (df['high'] + df['low'] + 2 * df['close']) / 4
 
     def ema(self, series, length=8):
-                return series.ewm(span=length, adjust=False).mean()
+        return series.ewm(span=length, adjust=False).mean()
 
     def std(self, series, period):
-                return series.rolling(period).std()
+        return series.rolling(period).std()
             
     def wpr(self, df, period):
         df = df.copy()
@@ -65,7 +64,7 @@ class SignalEngine:
     # frequency ZigZag 
     # =========================
 
-    def HFMS_vectorized(self, df, left=1, right=1):
+    def Market_Structure(self, df, left=1, right=1):
 
         df = df.copy()
    
@@ -115,8 +114,8 @@ class SignalEngine:
         df2 = df2.sort_values('time').reset_index(drop=True)
     
         # --- Compute zigzag ---
-        df1 = self.HFMS_vectorized(df1, left=1, right=1)
-        df2 = self.HFMS_vectorized(df2, left=2, right=2)  # smoother HTF
+        df1 = self.Market_Structure(df1, left=1, right=1)
+        df2 = self.Market_Structure(df2, left=2, right=2)  # smoother HTF
     
         # --- Select + rename HTF columns ---
         cols_to_map = ['time', 'H', 'L', 'dir', 'last_H', 'last_L']
@@ -289,7 +288,6 @@ class SignalEngine:
         df.loc[:, 'P50_stop_loss'] = np.nan
         df.loc[:, 'Risk-Reward-Ratio'] = np.nan
     
-         
         if df["dir_tf"].iloc[-1] == -1:
             df_5Y = pd.read_csv("DAX_Long_Signal_Data.csv")
 
@@ -461,9 +459,11 @@ class SignalEngine:
 
         return df
 
-    def Trend(df3):
+    def Trend(df, df3):
+        
         df = df.copy()
-    
+        df3 = df3.copy()
+        
         df['LT_Trend'] = "Not Applicable"
         wpr3 = self.wpr(df3, 40)
         # LONG condition
@@ -487,37 +487,34 @@ class SignalEngine:
         
     def Back_Test_Signals(self, df1, df2, df3):           
 
-        df = df1.copy()                                   #df1 = 3min
-        df2 = df2.copy()                                  #df2 = 1H
-        df3 = df3.copy()                                  #df3 = 1D
-        df = self.main_indicator(df)                      #Basic EMAs, Bollinger Bands and Williams period
-        df = self.multi_timeframe_zigzag(df1, df2)        #Lower(3min) and Higher(1H) frequency ZigZag 
+        df = df1.copy()                                   # df1 = 3min 
+        df2 = df2.copy()                                  # df2 = 1H
+        df3 = df3.copy()                                  # df3 = 1D
+        df = self.main_indicator(df)                      # Basic EMAs, Bollinger Bands and Williams period
+        df = self.multi_timeframe_zigzag(df1, df2)        # Lower(3min) and Higher(1H) frequency ZigZag 
         df = self.BOS_detection(df, buffer=3)             # Breaking of Structure pattern detection
         df = self.signals_vectorized(df)                  # Entry signal without confirmation
-        df = self.future_return(df)                       # P50 Admissible Risk and Reward
-        df = self.SL_RA(df, RM=10)                        # Stop Loss and Risk Assessment based on high frequency zigzag                 
-        df = self.StochasticTradable(df)                  # Risk Assessment
-        df = self.Over_Bought_Sold (df)                   # Market Saturation
-        df = self.SR_Daily_levels(df3,2,2)                # Supporting and Resistance levels on daily basis
-        df = self.tradable_signals(df)                    # Confirmend signals
+        df = self.future_return(df)                       # P50 Admissible Risk and Reward based on last 365 sessions
+
         
         return df
     
     def Real_time_signals(self, df1, df2, df3):
         
-        df = df1.copy()                                   #df1 = 3min
-        df2 = df2.copy()                                  #df2 = 1H
-        df3 = df3.copy()                                  #df3 = 1D
-        df = self.main_indicator(df)                      #Basic EMAs, Bollinger Bands and Williams period
-        df = self.multi_timeframe_zigzag(df1, df2)        #Lower(3min) and Higher(1H) frequency ZigZag 
+        df = df1.copy()                                   # df1 = 3min
+        df2 = df2.copy()                                  # df2 = 1H
+        df3 = df3.copy()                                  # df3 = 1D
+        df = self.Trend(df, df3)                          # Daily Trend
+        df = self.main_indicator(df)                      # Basic EMAs, Bollinger Bands and Williams period
+        df = self.multi_timeframe_zigzag(df1, df2)        # Lower(3min) and Higher(1H) frequency ZigZag 
         df = self.BOS_detection(df, buffer=3)             # Breaking of Structure pattern detection
         df = self.signals_vectorized(df)                  # Entry signal without confirmation
-        df = self.future_return(df)                       # P50 Admissible Risk and Reward
-        df = self.SL_RA(df, RM=10)                        # Stop Loss and Risk Assessment based on high frequency zigzag                 
+        df = self.future_return(df)                       # P50 Admissible Risk and Reward based on last 365 sessions
+        df = self.SL_RA(df, RM=10)                        # Stop Loss definition                 
         df = self.StochasticTradable(df)                  # Risk Assessment
         df = self.Over_Bought_Sold (df)                   # Market Saturation
-        df = self.SR_Daily_levels(df3,2,2)                # Supporting and Resistance levels on daily basis
-        df = self.tradable_signals(df)                    # Confirmend signals
+        df = self.SR_Daily_levels(df3,2,2)                # Support and Resistance levels on daily basis
+        df = self.tradable_signals(df)                    # Confirmed signals
    
         return df
 
@@ -569,7 +566,6 @@ class SignalEngine:
                 df.loc[long_idx, 'run-up'] = max_runup
                 df.loc[long_idx, 'draw-down'] = max_drawdown
 
-
         for short_idx in short_indices:
             # Find next LONG signal after this SHORT
             next_longs = [s for s in long_indices if s > short_idx]
@@ -595,7 +591,6 @@ class SignalEngine:
                 # Store results
                 df.loc[short_idx, 'run-up'] = max_runup
                 df.loc[short_idx, 'draw-down'] = max_drawdown
-
 
         # Export signals to CSV after processing all signals
         subset_long = df[df['signal'] == 'LONG']
