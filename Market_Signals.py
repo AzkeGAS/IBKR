@@ -99,44 +99,48 @@ class SignalEngine:
 
         return df
 
-    def multi_timeframe_zigzag(self, df_3m, df_1H):
+    def multi_timeframe_zigzag(self, df1, df2):
+    
+        # --- Copy to avoid modifying originals ---
+        df1 = df1.copy()
+        df2 = df2.copy()
     
         # --- Ensure datetime + sorting ---
-        df_3m = df_3m.copy()
-        df_1H = df_1H.copy()
+        df1['time'] = pd.to_datetime(df1['time'])
+        df2['time'] = pd.to_datetime(df2['time'])
     
-        df_3m['time'] = pd.to_datetime(df_3m['time'])
-        df_1H['time'] = pd.to_datetime(df_1H['time'])
+        df1 = df1.sort_values('time').reset_index(drop=True)
+        df2 = df2.sort_values('time').reset_index(drop=True)
     
-        df_3m = df_3m.sort_values('time').reset_index(drop=True)
-        df_1H = df_1H.sort_values('time').reset_index(drop=True)
+        # --- Compute zigzag ---
+        df1 = self.HFMS_vectorized(df1, left=1, right=1)
+        df2 = self.HFMS_vectorized(df2, left=2, right=2)  # smoother HTF
     
-        # --- Compute zigzag on both timeframes ---
-        df_3m = self.HFMS_vectorized(df_3m, left=1, right=1)
-    
-        df_1H_zigzag = self.HFMS_vectorized(df_1H, left=2, right=2)
-    
-        # --- Select + rename 1H columns ---
+        # --- Select + rename HTF columns ---
         cols_to_map = ['time', 'H', 'L', 'dir', 'last_H', 'last_L']
     
-        df_1H_map = df_1H_zigzag[cols_to_map].copy().rename(columns={
-            'H': 'H_1H',
-            'L': 'L_1H',
-            'dir': 'dir_1H',
-            'last_H': 'last_H_1H',
-            'last_L': 'last_L_1H'
+        df2_map = df2[cols_to_map].copy().rename(columns={
+            'H': 'H_2',
+            'L': 'L_2',
+            'dir': 'dir_2',
+            'last_H': 'last_H_2',
+            'last_L': 'last_L_2'
         })
     
-        # --- Merge (core step) ---
+        # --- CRITICAL: sort both before merge_asof ---
+        df1 = df1.sort_values('time')
+        df2_map = df2_map.sort_values('time')
+    
+        # --- Merge HTF into LTF ---
         df = pd.merge_asof(
-            df_3m,
-            df_1H_map,
+            df1,
+            df2_map,
             on='time',
             direction='backward'
         )
     
         # --- Forward fill HTF structure ---
-        htf_cols = ['H_1H', 'L_1H', 'dir_1H', 'last_H_1H', 'last_L_1H']
+        htf_cols = ['H_2', 'L_2', 'dir_2', 'last_H_2', 'last_L_2']
         df[htf_cols] = df[htf_cols].ffill()
     
         return df
