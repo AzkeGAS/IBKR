@@ -63,7 +63,7 @@ class SignalEngine:
     # High frequency ZigZag and BOS check
     # =========================
 
-    def HFMS_vectorized(self, df, left=1, right=1, buffer=3):
+    def HFMS_vectorized(self, df, left=1, right=1):
 
         df = df.copy()
    
@@ -96,6 +96,10 @@ class SignalEngine:
         # Step 4: last pivot values
         df.loc[:, 'last_H'] = df['H'].ffill()
         df.loc[:, 'last_L'] = df['L'].ffill()
+
+        return df
+
+    def BOS_detection(df, buffer=3):
 
         df.loc[:, 'H_wpr'] = df['wpr'].where(df['H'].notna()).ffill()
         df.loc[:, 'L_wpr'] = df['wpr'].where(df['L'].notna()).ffill()
