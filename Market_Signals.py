@@ -250,21 +250,8 @@ class SignalEngine:
 
         df = df.copy()
         # --- Conditions ---
-        long_cond = (
-            (df["BOS"] == "UP") &
-            (
-                (df["Risk_Long_Adm"] == True) |
-                (df["dir_tf"] == -1)
-            )
-        )
-
-        short_cond = (
-            (df["BOS"] == "DOWN") &
-            (
-                (df["Risk_Short_Adm"] == True) |
-                (df["dir_tf"] == 1)
-            )
-        )
+        long_cond = (df["BOS"] == "UP")
+        short_cond = (df["BOS"] == "DOWN")
 
         # --- Raw signals (vectorized) ---
         df.loc[:, "raw_signal"] = np.where(long_cond, "LONG",
@@ -585,10 +572,11 @@ class SignalEngine:
 
         df = df.copy()
         df = self.main_indicator(df)
+        df = self.multi_timeframe_zigzag(df1, df2):
+        df = self.BOS_detection(df, buffer=3)
+        df = self.SL_RA(df, RM=10)
         df = self.Over_Bought_Sold (df)
-        df = self.SR_Daily_levels(df,2,2)
-        df = self.HFMS_vectorized(df, left=1, right=1, buffer=buffer)
-        df = self.TFMS_vectorized(df, left=40, right=40, RM=RM, shift_pivots=False)
+        df = self.SR_Daily_levels(df3,2,2)
         df = self.signals_vectorized(df)
         df = self.future_return(df)
 
