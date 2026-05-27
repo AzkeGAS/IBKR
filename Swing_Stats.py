@@ -72,13 +72,12 @@ def swing_statistics(swings):
             'count': len(subset),
             'avg_move': subset['points'].mean(),
             'median_move': subset['points'].median(),
-            'p20_move': subset['points'].quantile(0.20), 
-            'p80_move': subset['points'].quantile(0.80),  
+            'p25_move': subset['points'].quantile(0.25), 
+            'p27_move': subset['points'].quantile(0.75),  
             'max_move': subset['points'].max(),
             'min_move': subset['points'].min(),
             'avg_pct': subset['pct_move'].mean(),
-            'avg_duration': subset['duration'].mean(),
-            'win_rate': (subset['points'] > 0).mean()
+            'avg_duration': subset['duration'].mean()
         }
 
     return pd.DataFrame(stats)
