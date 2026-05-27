@@ -169,176 +169,82 @@ class SignalEngine:
 
         return df
 
-    # =========================
-    # Low frequency ZigZag and Risk assessment
-    # =========================
-    def TFMS_vectorized(self, df, left=40, right=40, RM=10, shift_pivots=True):
-
-
+    def SL_RA(self, df, RM=10):
+    
         df = df.copy()
-        window = left + right + 1
-
+    
         # --------------------------------------------------
-        # 1. Detectar pivots (raw)
-        # --------------------------------------------------
-        rolling_max = df['high'].rolling(window, center=True).max()
-        rolling_min = df['low'].rolling(window, center=True).min()
-
-        df.loc[:, 'H_raw'] = np.where(
-            (df['high'] == rolling_max) &
-            (df['high'] > df['high'].shift(1)),
-            df['high'], np.nan
-        )
-
-        df.loc[:, 'L_raw'] = np.where(
-            (df['low'] == rolling_min) &
-            (df['low'] < df['low'].shift(1)),
-            df['low'], np.nan
-        )
-
-        # --------------------------------------------------
-        # 2. Quitar lookahead (backtest real)
-        # --------------------------------------------------
-        if shift_pivots:
-            df.loc[:, 'H_raw'] = df.loc[:, 'H_raw'].shift(right)
-            df.loc[:, 'L_raw'] = df.loc[:, 'L_raw'].shift(right)
-
-        # --------------------------------------------------
-        # 3. Combinar pivots
-        # --------------------------------------------------
-        pivot_type = np.where(df['H_raw'].notna(), 'H',
-                    np.where(df['L_raw'].notna(), 'L', None))
-
-        pivot_price = np.where(df['H_raw'].notna(), df['H_raw'],
-                    np.where(df['L_raw'].notna(), df['L_raw'], np.nan))
-
-        # --------------------------------------------------
-        # 4. FILTRO DE ALTERNANCIA (CORE)
-        # --------------------------------------------------
-        filtered_type = [None] * len(df)
-        filtered_price = [np.nan] * len(df)
-
-        last_type = None
-        last_price = None
-        last_idx = None
-
-        for i in range(len(df)):
-
-            t = pivot_type[i]
-            p = pivot_price[i]
-
-            if t is None:
-                continue
-
-            # --- primer pivot: SOLO L ---
-            if last_type is None:
-                if t == 'L':
-                    filtered_type[i] = 'L'
-                    filtered_price[i] = p
-                    last_type = 'L'
-                    last_price = p
-                    last_idx = i
-                continue
-
-            # --- alternancia ---
-            if t != last_type:
-                filtered_type[i] = t
-                filtered_price[i] = p
-                last_type = t
-                last_price = p
-                last_idx = i
-
-            else:
-                # --- mismo tipo → mantener extremo ---
-                if t == 'H' and p > last_price:
-                    filtered_type[last_idx] = None
-                    filtered_price[last_idx] = np.nan
-
-                    filtered_type[i] = 'H'
-                    filtered_price[i] = p
-
-                    last_price = p
-                    last_idx = i
-
-                elif t == 'L' and p < last_price:
-                    filtered_type[last_idx] = None
-                    filtered_price[last_idx] = np.nan
-
-                    filtered_type[i] = 'L'
-                    filtered_price[i] = p
-
-                    last_price = p
-                    last_idx = i
-
-        # --------------------------------------------------
-        # 5. Reconstrucción final
-        # --------------------------------------------------
-        df.loc[:, 'H_tf'] = np.where(np.array(filtered_type) == 'H', filtered_price, np.nan)
-        df.loc[:, 'L_tf'] = np.where(np.array(filtered_type) == 'L', filtered_price, np.nan)
-
-
-        # --------------------------------------------------
-        # 6. Índices y dirección
+        # 1. Index tracking for HTF pivots
         # --------------------------------------------------
         idx = np.arange(len(df))
-
-        df.loc[:, 'H_idx_tf'] = np.where(df.loc[:, 'H_tf'].notna(), idx, np.nan)
-        df.loc[:, 'L_idx_tf'] = np.where(df.loc[:, 'L_tf'].notna(), idx, np.nan)
-
-        df.loc[:, 'H_idx_tf'] = df.loc[:, 'H_idx_tf'].ffill()
-        df.loc[:, 'L_idx_tf'] = df.loc[:, 'L_idx_tf'].ffill()
-
-        df.loc[:, 'dir_tf'] = np.where(df.loc[:, 'H_idx_tf'] > df.loc[:, 'L_idx_tf'], 1, -1)
-
+    
+        df['H_idx_2'] = np.where(df['H_2'].notna(), idx, np.nan)
+        df['L_idx_2'] = np.where(df['L_2'].notna(), idx, np.nan)
+    
+        df['H_idx_2'] = df['H_idx_2'].ffill()
+        df['L_idx_2'] = df['L_idx_2'].ffill()
+    
         # --------------------------------------------------
-        # 7. Últimos pivots
+        # 2. Last pivots
         # --------------------------------------------------
-        df.loc[:, 'last_H_tf'] = df.loc[:, 'H_tf'].ffill()
-        df.loc[:, 'last_L_tf'] = df.loc[:, 'L_tf'].ffill()
-
-        # --- Extremes since pivot (SAFE replacement of future lookups) ---
-        df.loc[:, 'low_since_H'] = df['low'].groupby(df['H_idx_tf']).cummin()
-        df.loc[:, 'high_since_L'] = df['high'].groupby(df['L_idx_tf']).cummax()
-
-        # --- Swing ---
-        df.loc[:, 'swing_tf'] =  df['last_H_tf'] - df['last_L_tf']
-
-        df.loc[:, 'swing_H_tf'] = np.where(np.array(filtered_type) == 'H', df['last_H_tf'] - df['last_L_tf'], np.nan)
-        df.loc[:, 'swing_L_tf'] = np.where(np.array(filtered_type) == 'L', -df['last_H_tf'] + df['last_L_tf'], np.nan)
-        
-        swing_up_mean = df['swing_H_tf'].dropna().mean()/2
-        print(swing_up_mean)
-        swing_down_mean = df['swing_L_tf'].dropna().mean()/2
-        print(swing_down_mean)
-
+        df['last_H_2'] = df['H_2'].ffill()
+        df['last_L_2'] = df['L_2'].ffill()
+    
+        # --------------------------------------------------
+        # 3. Extremes since pivot (✅ correct, no future leak)
+        # --------------------------------------------------
+        df['low_since_H_2'] = df['low'].groupby(df['H_idx_2']).cummin()
+        df['high_since_L_2'] = df['high'].groupby(df['L_idx_2']).cummax()
+    
+        # --------------------------------------------------
+        # 4. Swing
+        # --------------------------------------------------
+        df['swing_2'] = df['last_H_2'] - df['last_L_2']
+    
+        # ✅ FIX: 'filtered_type' was undefined → remove or replace
+        df['swing_H_2'] = np.where(df['dir_2'] == -1, df['swing_2'], np.nan)
+        df['swing_L_2'] = np.where(df['dir_2'] == 1, -df['swing_2'], np.nan)
+    
+        swing_up_mean = df['swing_H_2'].dropna().mean() / 2
+        swing_down_mean = df['swing_L_2'].dropna().mean() / 2
+    
+        # --------------------------------------------------
+        # 5. Stops
+        # --------------------------------------------------
         rm = RM / 100
         close = df['close']
-
-        # --- Stops ---
-        long_mask = df['dir_tf'] == 1
-
-        df.loc[:, 'ST_Long'] = np.where(
+    
+        long_mask = df['dir_2'] == 1
+    
+        df['ST_Long'] = np.where(
             long_mask,
-            df['last_L_tf'] - abs(df['last_H_tf'] - df['last_L_tf']) * rm,
-            df['low_since_H'] - abs(df['last_H_tf'] - df['low_since_H']) * rm  
+            df['last_L_2'] - df['swing_2'].abs() * rm,
+            df['low_since_H_2'] - (df['last_H_2'] - df['low_since_H_2']).abs() * rm
         )
-
-        df.loc[:, 'ST_Short'] = np.where(
+    
+        df['ST_Short'] = np.where(
             long_mask,
-            df['high_since_L'] + abs(df['last_H_tf'] - df['high_since_L']) * rm,
-            df['last_H_tf'] + abs(df['last_H_tf'] - df['last_L_tf']) * rm
+            df['high_since_L_2'] + (df['high_since_L_2'] - df['last_L_2']).abs() * rm,
+            df['last_H_2'] + df['swing_2'].abs() * rm
         )
-
-        # --- Risk ---
-        df.loc[:, 'KO_Long'] = (close - df['ST_Long']) 
-        df.loc[:, 'KO_Short'] = (df['ST_Short'] - close)
-        df.loc[:, 'Risk_Long'] = (close - df['ST_Long']) / close * 100
-        df.loc[:, 'Risk_Short'] = (df['ST_Short'] - close) / close * 100
-        
-        df.loc[:, 'Risk_Long_Adm'] = True if df.loc[:, 'KO_Long'].iloc[-1] < swing_up_mean else False
-        df.loc[:, 'Risk_Short_Adm'] = True if df.loc[:, 'KO_Short'].iloc[-1] < swing_down_mean else False
-
+    
+        # --------------------------------------------------
+        # 6. Risk metrics
+        # --------------------------------------------------
+        df['KO_Long'] = close - df['ST_Long']
+        df['KO_Short'] = df['ST_Short'] - close
+    
+        df['Risk_Long'] = df['KO_Long'] / close * 100
+        df['Risk_Short'] = df['KO_Short'] / close * 100
+    
+        # --------------------------------------------------
+        # 7. ✅ IMPORTANT FIX: row-wise boolean instead of scalar
+        # --------------------------------------------------
+        df['Risk_Long_Adm'] = df['KO_Long'] < swing_up_mean
+        df['Risk_Short_Adm'] = df['KO_Short'] < swing_down_mean
+    
         return df
+
     
     def signals_vectorized(self,df):
 
