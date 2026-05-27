@@ -83,7 +83,7 @@ def swing_statistics(swings):
 
     return pd.DataFrame(stats)
 
-df_hfms = Market_Structure(df)
+df_hfms = Market_Structure(df, left=2, right=2)
 swings = extract_swings(df_hfms)
 swings = classify_swings(swings)
 swings = compute_swing_metrics(swings)
