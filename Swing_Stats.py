@@ -90,15 +90,5 @@ swings = compute_swing_metrics(swings)
 
 stats = swing_statistics(swings)
 
-import matplotlib.pyplot as plt
 
-bull = swings[swings['direction'] == 'bull']['points']
-bear = swings[swings['direction'] == 'bear']['points']
-
-plt.figure()
-plt.boxplot([bull, bear], labels=['Bull', 'Bear'])
-plt.title('Swing Distribution (Box & Whisker)')
-plt.ylabel('Points')
-plt.xlabel('Direction')
-plt.show()
 
