@@ -27,36 +27,38 @@ class SignalEngine:
         return wpr
             
     def main_indicator(self, df):
-
+    
         df = df.copy()
-
+    
         # ---- HLC4 ----
         hlc4 = self.hlc4(df)
-
+    
         # ---- EMA ----
-        df.loc[:, 'EMA8'] = hlc4.ewm(span=8).mean()
-        df.loc[:, 'EMA155'] = hlc4.ewm(span=155).mean()
-
-        # ---- Bands ----
-        std155 = hlc4.rolling(155).std()
-        df.loc[:, 'UpperBand'] = df['EMA155'] + 2 * std155
-        df.loc[:, 'LowerBand'] = df['EMA155'] - 2 * std155
-
-
-        # ---- Trend (spread EMA) ----
-        ema123 = hlc4.ewm(span=123).mean()
-        ema188 = hlc4.ewm(span=188).mean()
-        trend = (ema123 - ema188).ewm(span=2).mean()
-        df.loc[:, 'Trend'] = trend
-
-        # ---- Velocity & Acceleration (suavizado) ----
-        vel = trend.pct_change().ewm(span=2).mean()
-        df.loc[:, 'Velocity'] = vel
-        df.loc[:, 'Acceleration'] = vel.diff()
-
+        df['EMA8'] = self.ema(hlc4, 8)
+        df['EMA155'] = self.ema(hlc4, 155)
+    
+        # ---- Bands (Bollinger-style on EMA155) ----
+        std155 = self.std(hlc4, 155)
+        df['UpperBand'] = df['EMA155'] + 2 * std155
+        df['LowerBand'] = df['EMA155'] - 2 * std155
+    
+        # ---- Trend (EMA spread smoothed) ----
+        ema123 = self.ema(hlc4, 123)
+        ema188 = self.ema(hlc4, 188)
+    
+        trend_raw = ema123 - ema188
+        df['Trend'] = self.ema(trend_raw, 2)
+    
+        # ---- Velocity & Acceleration (smoothed) ----
+        velocity = df['Trend'].pct_change()
+        velocity = self.ema(velocity, 2)
+    
+        df['Velocity'] = velocity
+        df['Acceleration'] = velocity.diff()
+    
         # ---- WPR ----
-        df.loc[:, 'wpr'] = self.wpr(df, 40)
-        
+        df['WPR'] = self.wpr(df, 40)
+    
         return df
 
     # =========================
