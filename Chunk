@@ -12,7 +12,7 @@ PORT = 7497
 CLIENT_ID = 1
 
 REQ_DELAY = 1.2   # pacing control (seconds)
-CHUNK_SIZE = "1 W"   # safe chunk for 3-min bars
+CHUNK_SIZE = "1 W"   # 1 W safe chunk for 3-min bars;  1 M safe chunk for 1-hour bars; 1 Y safe chunk for 1-D bars
 
 
 class IBApp(EWrapper, EClient):
