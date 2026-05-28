@@ -1,0 +1,146 @@
+import threading
+import queue
+import time
+import datetime
+from ibapi.client import EClient
+from ibapi.wrapper import EWrapper
+from ibapi.contract import Contract
+
+HOST = "127.0.0.1"
+PORT = 7497
+CLIENT_ID = 1
+
+REQ_DELAY = 1.2   # pacing control (seconds)
+CHUNK_SIZE = "1 W"   # safe chunk for 3-min bars
+
+
+class IBApp(EWrapper, EClient):
+    def __init__(self, request_queue):
+        EClient.__init__(self, self)
+        self.request_queue = request_queue
+        self.data = []
+        self.req_status = {}
+        self.lock = threading.Lock()
+
+    # ---- Data callback ----
+    def historicalData(self, reqId, bar):
+        with self.lock:
+            self.data.append((reqId, bar.date, bar.open, bar.high,
+                              bar.low, bar.close, bar.volume))
+
+    # ---- End callback ----
+    def historicalDataEnd(self, reqId, start, end):
+        print(f"✅ Finished req {reqId}")
+        self.req_status[reqId] = True
+
+    # ---- Error handling ----
+    def error(self, reqId, errorCode, errorString):
+        print(f"⚠️ Error {reqId}: {errorCode} - {errorString}")
+
+
+# ---- Contract builder ----
+def create_contract(symbol="AAPL"):
+    contract = Contract()
+    contract.symbol = symbol
+    contract.secType = "STK"
+    contract.exchange = "SMART"
+    contract.currency = "USD"
+    return contract
+
+
+# ---- Worker thread (rate-limited requester) ----
+def request_worker(app):
+    while True:
+        item = app.request_queue.get()
+
+        if item is None:
+            break
+
+        req_id, contract, end_str = item
+
+        print(f"📡 Request {req_id} -> {end_str}")
+
+        app.reqHistoricalData(
+            reqId=req_id,
+            contract=contract,
+            endDateTime=end_str,
+            durationStr=CHUNK_SIZE,
+            barSizeSetting="3 mins",
+            whatToShow="TRADES",
+            useRTH=0,
+            formatDate=1,
+            keepUpToDate=False,
+            chartOptions=[]
+        )
+
+        time.sleep(REQ_DELAY)
+        app.request_queue.task_done()
+
+
+# ---- Build request schedule ----
+def build_requests(app, contract, years=10):
+    end = datetime.datetime.now()
+    req_id = 1
+    total_weeks = years * 52
+
+    for _ in range(total_weeks):
+        end_str = end.strftime("%Y%m%d %H:%M:%S")
+
+        app.request_queue.put((req_id, contract, end_str))
+
+        end -= datetime.timedelta(weeks=1)
+        req_id += 1
+
+
+# ---- Run IB client loop in separate thread ----
+def run_loop(app):
+    app.run()
+
+
+# ---- MAIN ----
+def main():
+    request_queue = queue.Queue()
+
+    app = IBApp(request_queue)
+    app.connect(HOST, PORT, CLIENT_ID)
+
+    # Start IB socket loop
+    api_thread = threading.Thread(target=run_loop, args=(app,), daemon=True)
+    api_thread.start()
+
+    time.sleep(2)
+
+    contract = create_contract("AAPL")
+
+    # Start worker thread
+    worker = threading.Thread(target=request_worker, args=(app,), daemon=True)
+    worker.start()
+
+    # Build all requests
+    build_requests(app, contract, years=10)
+
+    # Wait until queue is fully processed
+    request_queue.join()
+
+    # Stop worker
+    request_queue.put(None)
+    worker.join()
+
+    print("🎉 All requests completed")
+
+    # ---- Optional: Deduplicate + sort ----
+    unique = {}
+    for row in app.data:
+        unique[row[1]] = row
+
+    sorted_data = sorted(unique.values(), key=lambda x: x[1])
+
+    print(f"Total bars: {len(sorted_data)}")
+
+    # Example: print first few
+    for r in sorted_data[:10]:
+        print(r)
+
+
+if __name__ == "__main__":
+    main()
