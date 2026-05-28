@@ -2,6 +2,7 @@ import threading
 import queue
 import time
 import datetime
+import csv
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
@@ -140,6 +141,11 @@ def main():
     # Example: print first few
     for r in sorted_data[:10]:
         print(r)
+
+    with open("data.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["reqId","date","open","high","low","close","volume"])
+        writer.writerows(sorted_data)
 
 
 if __name__ == "__main__":
